@@ -1,5 +1,31 @@
 # P.O.H - web
 
+P.O.H Webpage project.
+
+**Versions**:
+
+- `go:1.27.0`
+
+## Development
+
+Start a development server:
+
+```bash
+make dev
+```
+
+Run test suite:
+
+```bash
+make test
+```
+
+Run build:
+
+```bash
+make build
+```
+
 ## Ideas
 
 Some ideas we can work on
