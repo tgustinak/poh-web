@@ -5,6 +5,8 @@ P.O.H Webpage project.
 **Versions**:
 
 - `go:1.27.0`
+- `npm:11.16.0`
+- `node:v24.18.0`
 
 ## Development
 
