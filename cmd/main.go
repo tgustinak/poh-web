@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/tgustinak/pohkapela.sk/internal/server"
+	"github.com/tgustinak/pohkapela.sk/web/templates"
 )
 
 const (
@@ -19,8 +22,13 @@ func main() {
 
 	srv.Route("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, world!"))
+
+		renderTemplate(templates.Home(), w)
 	})
 
 	srv.Start()
+}
+
+func renderTemplate(t templ.Component, w http.ResponseWriter) {
+	t.Render(context.Background(), w)
 }

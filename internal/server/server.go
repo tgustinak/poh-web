@@ -33,6 +33,14 @@ func (s *Server) Start() {
 		Handler: s.mux,
 	}
 
+	s.mux.Handle(
+		"/static/",
+		http.StripPrefix(
+			"/static/",
+			http.FileServer(http.Dir("./web/static")),
+		),
+	)
+
 	fmt.Printf("\nStarting on http://localhost%s\n\n", s.options.Port)
 
 	go func() {
