@@ -1,17 +1,63 @@
 package templates
 
+import "github.com/tgustinak/pohkapela.sk/internal/concerts"
+
 templ Home() {
 	@Base("P.O.H") {
-		<main class="flex min-h-screen items-center justify-center px-6">
-			<div class="max-w-3xl text-center">
-				<h1 class="text-5xl font-bold tracking-tight sm:text-7xl">
-					Kapela <span class="text-orange-400">P.O.H</span>
-				</h1>
-				<div class="mt-6 inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300">
-					<span class="mr-2 h-2 w-2 rounded-full bg-amber-400"></span>
-					Work in progress..
-				</div>
+		@Navigation()
+		<!-- hero -->
+		<section id="domov" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+			<img src="/static/images/hero.jpg" alt="" class="absolute inset-0 w-full h-full object-cover" widths="[640, 1024, 1920]}" sizes="100vw" loading="eager"/>
+			<div class="absolute inset-0 bg-black/50"></div>
+			<div class="relative text-center z-10">
+				<h1 class="text-6xl md:text-8xl font-bold tracking-widest uppercase text-white">P.O.H</h1>
+				<p class="mt-4 text-lg text-white/60 tracking-wide">Kapela Pohkapela</p>
 			</div>
-		</main>
+		</section>
+		<!-- music -->
+		<section id="hudba" class="min-h-screen bg-neutral-950">
+			<div class="container mx-auto min-h-screen flex flex-col items-center justify-center">
+				<h2 class="text-4xl mb-12 block font-bold tracking-wide text-white/90">Hudba</h2>
+				<iframe
+					data-testid="embed-iframe"
+					style="border-radius:12px"
+					src="https://open.spotify.com/embed/artist/2UPXTy1tjnlfKQbci8XjTq?utm_source=generator&theme=0"
+					width="100%"
+					height="352"
+					allowfullscreen=""
+					allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+					loading="lazy"
+				></iframe>
+			</div>
+		</section>
+		<!-- concerts -->
+		@Concerts([]concerts.Concert{
+			{Name: "Kubínsky Jarmok", Day: 18, Month: "Jan"},
+			{Name: "Kubínsky Jarmok", Day: 11, Month: "Feb"},
+			{Name: "Kubínsky Jarmok", Day: 1, Month: "Mar"},
+			{Name: "Kubínsky Jarmok", Day: 8, Month: "Apr"},
+			{Name: "Kubínsky Jarmok", Day: 18, Month: "Sep"},
+			{Name: "Gustove Narodky", Day: 26, Month: "Oct"},
+		})
+		<!-- merch -->
+		<section id="merch" class="min-h-screen flex items-center justify-center bg-neutral-950">
+			<h2 class="text-4xl font-bold tracking-wide text-white/90">Merch</h2>
+		</section>
+		<!-- video -->
+		<section id="klipy" class="min-h-screen flex items-center justify-center bg-black">
+			<h2 class="text-4xl font-bold tracking-wide text-white/90">Klipy</h2>
+		</section>
+		<!-- about -->
+		<section id="o-nas" class="min-h-screen flex items-center justify-center bg-neutral-950">
+			<h2 class="text-4xl font-bold tracking-wide text-white/90">O nás</h2>
+		</section>
+		<!-- gallery -->
+		<section id="fotky" class="min-h-screen flex items-center justify-center bg-black">
+			<h2 class="text-4xl font-bold tracking-wide text-white/90">Fotky</h2>
+		</section>
+		<!-- contact -->
+		<section id="kontakt" class="min-h-screen flex items-center justify-center bg-neutral-950">
+			<h2 class="text-4xl font-bold tracking-wide text-white/90">Kontakt</h2>
+		</section>
 	}
 }

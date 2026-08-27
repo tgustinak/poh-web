@@ -1,0 +1,90 @@
+package templates
+
+templ Navigation() {
+	<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex items-center justify-between h-20">
+				<a href="/" class="transition-opacity duration-300 hover:opacity-80">
+					<img src="/static/images/logo.png" alt="P.O.H" class="h-12 w-auto"/>
+				</a>
+				<div class="hidden md:flex items-center space-x-1">
+					<a href="#domov" class="nav-link">Domov</a>
+					<a href="#hudba" class="nav-link">Hudba</a>
+					<a href="#koncerty" class="nav-link">Koncerty</a>
+					<a href="#merch" class="nav-link">Merch</a>
+					<a href="#klipy" class="nav-link">Klipy</a>
+					<a href="#o-nas" class="nav-link">O nás</a>
+					<a href="#fotky" class="nav-link">Fotky</a>
+					<a href="#pre-organizatorov" class="nav-link">Pre organizátorov</a>
+					<a href="#kontakt" class="nav-link">Kontakt</a>
+				</div>
+				<button
+					id="mobile-menu-btn"
+					class="md:hidden relative w-10 h-10 flex items-center justify-center text-white focus:outline-none"
+					aria-label="Toggle menu"
+				>
+					<span id="hamburger-icon" class="block">
+						<span class="block w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 origin-center"></span>
+						<span class="block w-6 h-0.5 bg-white mb-1.5 transition-all duration-300"></span>
+						<span class="block w-6 h-0.5 bg-white transition-all duration-300 origin-center"></span>
+					</span>
+				</button>
+			</div>
+		</div>
+		<div id="mobile-menu" class="md:hidden hidden">
+			<div class="bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 py-6 space-y-1">
+				<a href="#domov" class="mobile-nav-link">Domov</a>
+				<a href="#hudba" class="mobile-nav-link">Hudba</a>
+				<a href="#koncerty" class="mobile-nav-link">Koncerty</a>
+				<a href="#merch" class="mobile-nav-link">Merch</a>
+				<a href="#klipy" class="mobile-nav-link">Klipy</a>
+				<a href="#o-nas" class="mobile-nav-link">O nás</a>
+				<a href="#fotky" class="mobile-nav-link">Fotky</a>
+				<a href="#pre-organizatorov" class="mobile-nav-link">Pre organizátorov</a>
+				<a href="#kontakt" class="mobile-nav-link">Kontakt</a>
+			</div>
+		</div>
+	</nav>
+	<script>
+  const navbar = document.getElementById('navbar');
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const hamburgerSpans = document.querySelectorAll('#hamburger-icon span');
+  let isMenuOpen = false;
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 50) {
+      navbar?.classList.add('bg-black/90', 'backdrop-blur-lg', 'shadow-lg', 'shadow-black/20');
+      navbar?.classList.remove('bg-transparent');
+    } else {
+      navbar?.classList.remove('bg-black/90', 'backdrop-blur-lg', 'shadow-lg', 'shadow-black/20');
+      navbar?.classList.add('bg-transparent');
+    }
+  });
+
+  mobileMenuBtn?.addEventListener('click', () => {
+    isMenuOpen = !isMenuOpen;
+    mobileMenu?.classList.toggle('hidden');
+
+    if (isMenuOpen) {
+      hamburgerSpans[0]?.classList.add('rotate-45', 'translate-y-2');
+      hamburgerSpans[1]?.classList.add('opacity-0');
+      hamburgerSpans[2]?.classList.add('-rotate-45', '-translate-y-2');
+    } else {
+      hamburgerSpans[0]?.classList.remove('rotate-45', 'translate-y-2');
+      hamburgerSpans[1]?.classList.remove('opacity-0');
+      hamburgerSpans[2]?.classList.remove('-rotate-45', '-translate-y-2');
+    }
+  });
+
+  document.querySelectorAll('.mobile-nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      isMenuOpen = false;
+      mobileMenu?.classList.add('hidden');
+      hamburgerSpans[0]?.classList.remove('rotate-45', 'translate-y-2');
+      hamburgerSpans[1]?.classList.remove('opacity-0');
+      hamburgerSpans[2]?.classList.remove('-rotate-45', '-translate-y-2');
+    });
+  });
+</script>
+}

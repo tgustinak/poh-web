@@ -1,0 +1,22 @@
+package templates
+
+import "github.com/tgustinak/pohkapela.sk/internal/concerts"
+
+templ Concerts(concerts []concerts.Concert) {
+	<section id="koncerty" class="min-h-screen bg-cover bg-right" style="background-image: url(/static/images/concerts.png)">
+		<div class="container mx-auto min-h-screen flex flex-col justify-center">
+			<div class="w-1/2">
+				<h2 class="mb-12 text-4xl font-bold tracking-wide text-white/90">Najbližšie sa vidíme:</h2>
+				for _, c := range concerts {
+					<div class="flex mt-8">
+						<div class="px-12 flex flex-col items-center justify-center">
+							<span class="text-2xl font-bold border-b-2 border-b-amber-400 uppercase">{ c.Month }</span>
+							<span class="text-3xl font-bold">{ c.Day }</span>
+						</div>
+						<div class="flex items-center font-bold text-xl">{ c.Name }</div>
+					</div>
+				}
+			</div>
+		</div>
+	</section>
+}
