@@ -54,6 +54,12 @@
     animation: nav-fade-up 0.4s ease forwards;
   }
 
+  .mobile-nav-org {
+    @apply mt-3 rounded-full border border-white/20 px-8 py-2.5 text-sm font-bold uppercase tracking-widest text-white/70 transition hover:border-amber-400/70 hover:text-amber-400;
+    opacity: 0;
+    animation: nav-fade-up 0.4s ease forwards;
+  }
+
   @keyframes nav-fade-up {
     from {
       opacity: 0;

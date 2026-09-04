@@ -56,7 +56,13 @@ templ Contact() {
 					</div>
 				</div>
 			</div>
-			<p class="mt-10 text-center text-sm text-white/40">Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H</p>
+			<div class="mt-10 text-center">
+				<a href="/pre-organizatorov" class="group inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-white/60 transition hover:text-amber-400">
+					Organizuješ akciu? Info pre organizátorov
+					<span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+				</a>
+			</div>
+			<p class="mt-8 text-center text-sm text-white/40">Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H</p>
 		</div>
 	</section>
 }

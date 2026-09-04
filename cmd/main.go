@@ -26,6 +26,12 @@ func main() {
 		renderTemplate(templates.Home(), w)
 	})
 
+	srv.Route("GET /pre-organizatorov", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+
+		renderTemplate(templates.Organizers(), w)
+	})
+
 	srv.Start()
 }
 
