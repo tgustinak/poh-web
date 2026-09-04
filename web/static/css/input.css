@@ -65,6 +65,63 @@
     }
   }
 
+  .hero-kenburns {
+    animation: hero-zoom 24s ease-in-out infinite alternate;
+  }
+
+  .hero-enter {
+    opacity: 0;
+    animation: hero-fade-up 0.9s ease forwards;
+  }
+
+  .hero-float {
+    animation: hero-fade-up 0.9s ease forwards, hero-float 7s ease-in-out 1.2s infinite;
+  }
+
+  .hero-float {
+    animation: hero-fade-up 0.9s ease forwards, hero-float 7s ease-in-out 1.2s infinite;
+  }
+
+  @keyframes hero-zoom {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes hero-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hero-float {
+    0%, 100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -8px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-kenburns,
+    .hero-float {
+      animation: none;
+    }
+    .hero-enter {
+      opacity: 1;
+      animation: none;
+    }
+  }
+
   .merch-pill {
     @apply rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-black/70 backdrop-blur border border-white/20 text-white/80 transition hover:border-amber-400/60 hover:text-white;
   }

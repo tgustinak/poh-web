@@ -6,12 +6,28 @@ templ Home() {
 	@Base("P.O.H") {
 		@Navigation()
 		<!-- hero -->
-		<section id="domov" class="relative min-h-screen flex items-center justify-center overflow-hidden">
-			<img src="/static/images/hero.jpg" alt="" class="absolute inset-0 w-full h-full object-cover" widths="[640, 1024, 1920]}" sizes="100vw" loading="eager"/>
-			<div class="absolute inset-0 bg-black/50"></div>
-			<div class="relative text-center z-10">
-				<h1 class="text-6xl md:text-8xl font-bold tracking-widest uppercase text-white">P.O.H</h1>
-				<p class="mt-4 text-lg text-white/60 tracking-wide">Kapela Pohkapela</p>
+		<section id="domov" class="relative min-h-screen flex flex-col overflow-hidden bg-black">
+			<img
+				src="/static/images/hero.jpg"
+				alt="Kapela P.O.H na pódiu"
+				class="hero-kenburns absolute inset-0 w-full h-full object-cover"
+				loading="eager"
+				fetchpriority="high"
+			/>
+			<div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-black/70"></div>
+			<div class="absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%)"></div>
+			<div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-neutral-950 to-transparent"></div>
+			<div class="relative z-10 flex flex-1 flex-col items-center justify-center text-center px-4 pt-20">
+				<img
+					src="/static/images/logo.svg"
+					alt="P.O.H"
+					class="hero-enter hero-float w-72 sm:w-80 md:w-96 h-auto drop-shadow-[0_10px_40px_rgba(0,0,0,0.9)]"
+				/>
+				<div class="hero-enter mt-8 flex items-center gap-4 sm:gap-5" style="animation-delay:250ms">
+					<span class="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent to-amber-400/70" aria-hidden="true"></span>
+					<p class="text-center text-xs sm:text-sm md:text-base font-semibold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white/90">Folk-Rocková kapela z Dolného Kubína</p>
+					<span class="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent to-amber-400/70" aria-hidden="true"></span>
+				</div>
 			</div>
 		</section>
 		<!-- music -->
