@@ -44,20 +44,20 @@ templ Navigation() {
 				</button>
 			</div>
 		</div>
-		<div id="mobile-menu" class="lg:hidden hidden fixed inset-0 top-0 bg-black/95 backdrop-blur-xl">
-			<div class="flex flex-col items-center justify-center h-full gap-1 px-8 pt-10">
-				<a href="#domov" class="mobile-nav-big" style="animation-delay:20ms">Domov</a>
-				<a href="#hudba" class="mobile-nav-big" style="animation-delay:60ms">Hudba</a>
-				<a href="#merch" class="mobile-nav-big" style="animation-delay:100ms">Merch</a>
-				<a href="#klipy" class="mobile-nav-big" style="animation-delay:140ms">Klipy</a>
-				<a href="#o-nas" class="mobile-nav-big" style="animation-delay:180ms">O nás</a>
-				<a href="#social" class="mobile-nav-big" style="animation-delay:220ms">Social</a>
-				<a href="#kontakt" class="mobile-nav-big" style="animation-delay:260ms">Kontakt</a>
-				<a href="#koncerty" class="mobile-nav-big-cta" style="animation-delay:300ms">Koncerty →</a>
-				<a href="/pre-organizatorov" class="mobile-nav-org" style="animation-delay:340ms">Pre organizátorov</a>
-			</div>
-		</div>
 	</nav>
+	<div id="mobile-menu" class="lg:hidden hidden fixed inset-0 top-0 z-40 bg-black/95 backdrop-blur-xl">
+		<div class="flex flex-col items-center justify-center h-full gap-1 px-8 pt-10">
+			<a href="#domov" class="mobile-nav-big" style="animation-delay:20ms">Domov</a>
+			<a href="#hudba" class="mobile-nav-big" style="animation-delay:60ms">Hudba</a>
+			<a href="#merch" class="mobile-nav-big" style="animation-delay:100ms">Merch</a>
+			<a href="#klipy" class="mobile-nav-big" style="animation-delay:140ms">Klipy</a>
+			<a href="#o-nas" class="mobile-nav-big" style="animation-delay:180ms">O nás</a>
+			<a href="#social" class="mobile-nav-big" style="animation-delay:220ms">Social</a>
+			<a href="#kontakt" class="mobile-nav-big" style="animation-delay:260ms">Kontakt</a>
+			<a href="#koncerty" class="mobile-nav-big-cta" style="animation-delay:300ms">Koncerty →</a>
+			<a href="/pre-organizatorov" class="mobile-nav-org" style="animation-delay:340ms">Pre organizátorov</a>
+		</div>
+	</div>
 	<script>
 		const navbar = document.getElementById('navbar');
 		const navbarInner = document.getElementById('navbar-inner');
