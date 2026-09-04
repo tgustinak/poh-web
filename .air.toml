@@ -10,7 +10,7 @@ tmp_dir = "tmp"
   bin = "./bin/app"
   cmd = "go build -o ./bin/app ./cmd/main.go"
   delay = 1000
-  exclude_dir = ["tmp"]
+  exclude_dir = ["tmp", "data", "node_modules"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
@@ -18,14 +18,19 @@ tmp_dir = "tmp"
   full_bin = ""
   ignore_dangerous_root_dir = false
   include_dir = []
-  include_ext = ["go", "tpl", "tmpl", "html"]
+  include_ext = ["go", "tpl", "tmpl", "html", "sql"]
   include_file = []
   kill_delay = "0s"
-  log = "build-errors.log"
+  log = "tmp/build-errors.log"
   poll = false
   poll_interval = 0
   post_cmd = []
-  pre_cmd = []
+  # Regenerate sqlc Go code before every rebuild, so editing
+  # db/queries/*.sql is picked up automatically while `make dev` runs.
+  # The script skips generation when up to date (sqlc rewrites its
+  # output files on every run, which would otherwise retrigger air
+  # in an infinite rebuild loop).
+  pre_cmd = ["./scripts/sqlc-generate.sh"]
   rerun = false
   rerun_delay = 500
   send_interrupt = false

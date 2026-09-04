@@ -22,6 +22,12 @@ Run test suite:
 make test
 ```
 
+Validate everything (templates, gofmt, vet, unit + integration tests):
+
+```bash
+make validate
+```
+
 Run build:
 
 ```bash

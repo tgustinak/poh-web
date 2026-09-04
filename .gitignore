@@ -1,7 +1,13 @@
 .DS_Store
 tmp/
 bin/
+data/
 node_modules/
+.env
+
+*.db
+*.db-shm
+*.db-wal
 
 *_templ.go
 output.css

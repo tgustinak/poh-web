@@ -24,6 +24,12 @@ func (s *Server) Route(path string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(path, handler)
 }
 
+// Mount registers handler h for pattern,
+// e.g. the full application mux at "/".
+func (s *Server) Mount(pattern string, handler http.Handler) {
+	s.mux.Handle(pattern, handler)
+}
+
 func (s *Server) Start() {
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Interrupt)
@@ -32,14 +38,6 @@ func (s *Server) Start() {
 		Addr:    s.options.Port,
 		Handler: s.mux,
 	}
-
-	s.mux.Handle(
-		"/static/",
-		http.StripPrefix(
-			"/static/",
-			http.FileServer(http.Dir("./web/static")),
-		),
-	)
 
 	fmt.Printf("\nStarting on http://localhost%s\n\n", s.options.Port)
 

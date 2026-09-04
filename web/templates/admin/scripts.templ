@@ -1,0 +1,32 @@
+package templates
+
+// AdminScripts loads htmx and provides the shared admin toast.
+// Server handlers notify the client with an HX-Trigger response header:
+//
+//	HX-Trigger: {"showToast": "Správa pre užívateľa."}
+//
+// htmx dispatches a showToast event on document.body which is rendered
+// as a toast. Success flows use HX-Redirect for full-page navigation.
+templ AdminScripts() {
+	<script src="/static/js/htmx.min.js"></script>
+	<div id="admin-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] text-center rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-black shadow-2xl"></div>
+	<script>
+		function adminToast(msg) {
+			const t = document.getElementById('admin-toast');
+			if (!t) {
+				return;
+			}
+			t.textContent = msg;
+			t.classList.remove('hidden');
+			clearTimeout(window.__adminToastTimer);
+			window.__adminToastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+		}
+		document.body.addEventListener('showToast', (e) => {
+			const d = e.detail;
+			const msg = typeof d === 'string' ? d : (d && (d.message || d.value)) || '';
+			if (msg) {
+				adminToast(msg);
+			}
+		});
+	</script>
+}
