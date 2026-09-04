@@ -2,7 +2,7 @@ package templates
 
 import "github.com/tgustinak/pohkapela.sk/web/templates"
 
-templ AdminLogin(errMsg string) {
+templ AdminLogin(errMsg string, csrf string) {
 	@templates.Base("Admin – Prihlásenie") {
 		<div class="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
 			<div class="w-full max-w-sm">
@@ -15,6 +15,7 @@ templ AdminLogin(errMsg string) {
 						<p role="alert" class="mb-4 rounded-lg border border-red-400/40 bg-red-400/10 px-4 py-2.5 text-sm font-semibold text-red-300">{ errMsg }</p>
 					}
 					<form method="POST" action="/admin/login" hx-post="/admin/login" hx-swap="none" class="flex flex-col gap-4">
+						<input type="hidden" name="csrf_token" value={ csrf }/>
 						<div>
 							<label class="admin-label" for="login-email">E-mail</label>
 							<input id="login-email" name="email" type="email" required autocomplete="username" placeholder="e-mail" class="admin-input"/>
@@ -31,6 +32,6 @@ templ AdminLogin(errMsg string) {
 				</p>
 			</div>
 		</div>
-		@AdminScripts()
+		@AdminScripts(csrf)
 	}
 }

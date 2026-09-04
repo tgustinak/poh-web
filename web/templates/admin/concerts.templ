@@ -1,7 +1,7 @@
 package templates
 
-templ AdminConcerts() {
-	@AdminLayout("Koncerty", "koncerty") {
+templ AdminConcerts(csrf string) {
+	@AdminLayout("Koncerty", "koncerty", csrf) {
 		@AdminPageHeader("Koncerty", "Nadchádzajúce termíny, prvý v zozname = najbližší")
 		<div class="admin-card">
 			<div class="overflow-x-auto">

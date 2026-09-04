@@ -1,7 +1,7 @@
 package templates
 
-templ AdminSocial() {
-	@AdminLayout("Social", "social") {
+templ AdminSocial(csrf string) {
+	@AdminLayout("Social", "social", csrf) {
 		@AdminPageHeader("Social", "Linky na sociálne siete a streamovacie služby")
 		<div class="admin-card">
 			<div class="overflow-x-auto">

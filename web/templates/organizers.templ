@@ -60,10 +60,11 @@ templ Organizers() {
 		</main>
 		<footer class="border-t border-white/10 bg-black">
 			<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-				<p class="text-sm text-white/40">Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H</p>
+				<p class="text-sm text-white/40">Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H · @ConsentResetLink()</p>
 				<a href="/" class="text-sm font-semibold text-white/60 transition hover:text-amber-400">Späť na hlavnú stránku →</a>
 			</div>
 		</footer>
+		@ConsentBanner()
 	}
 }
 

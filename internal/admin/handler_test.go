@@ -16,6 +16,7 @@ import (
 	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
 )
 
 func newTestHandler(t *testing.T) (*Handler, *auth.Service) {
@@ -45,16 +46,20 @@ func newTestHandler(t *testing.T) (*Handler, *auth.Service) {
 		t.Fatalf("seed admin user: %v", err)
 	}
 
-	return NewHandler(authSvc), authSvc
+	return NewHandler(authSvc, logbuffer.New(10)), authSvc
 }
+
+// testAnonCsrf is the anonymous CSRF token used by loginRequest.
+const testAnonCsrf = "test-anon-csrf-token"
 
 func loginRequest(t *testing.T, email, password string) *http.Request {
 	t.Helper()
 
-	form := url.Values{"email": {email}, "password": {password}}
+	form := url.Values{"email": {email}, "password": {password}, "csrf_token": {testAnonCsrf}}
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: auth.CsrfCookieName, Value: testAnonCsrf})
 
 	return req
 }
@@ -97,7 +102,7 @@ func TestLoginPageRendersForm(t *testing.T) {
 func TestLoginPageRedirectsWhenAuthenticated(t *testing.T) {
 	handler, authSvc := newTestHandler(t)
 
-	token, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
+	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -159,7 +164,7 @@ func TestLoginFailureRendersError(t *testing.T) {
 func TestLogoutClearsSession(t *testing.T) {
 	handler, authSvc := newTestHandler(t)
 
-	token, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
+	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -174,7 +179,7 @@ func TestLogoutClearsSession(t *testing.T) {
 		t.Fatalf("expected 303, got %d", rec.Code)
 	}
 
-	if _, err := authSvc.Authenticate(t.Context(), token); err == nil {
+	if _, _, err := authSvc.Authenticate(t.Context(), token); err == nil {
 		t.Fatal("expected session to be deleted after logout")
 	}
 }
@@ -204,7 +209,7 @@ func TestRequireAuthMiddleware(t *testing.T) {
 	}
 
 	// Valid cookie -> reaches the handler.
-	token, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
+	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -283,7 +288,7 @@ func TestLoginHtmxFailureTriggersToast(t *testing.T) {
 func TestLogoutHtmxRedirects(t *testing.T) {
 	handler, authSvc := newTestHandler(t)
 
-	token, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
+	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -302,7 +307,102 @@ func TestLogoutHtmxRedirects(t *testing.T) {
 		t.Fatalf("expected HX-Redirect to /admin, got %q", location)
 	}
 
-	if _, err := authSvc.Authenticate(t.Context(), token); err == nil {
+	if _, _, err := authSvc.Authenticate(t.Context(), token); err == nil {
 		t.Fatal("expected session to be deleted after logout")
+	}
+}
+
+func TestLoginCsrfMismatchRejected(t *testing.T) {
+	handler, _ := newTestHandler(t)
+
+	form := url.Values{"email": {"admin@example.com"}, "password": {"secret123"}, "csrf_token": {"wrong"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: auth.CsrfCookieName, Value: testAnonCsrf})
+	rec := httptest.NewRecorder()
+
+	handler.Login(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+
+	if cookie := sessionCookie(rec); cookie != nil && cookie.Value != "" {
+		t.Fatal("expected no session cookie on CSRF failure")
+	}
+}
+
+func TestLoginHtmxCsrfMismatchTriggersToast(t *testing.T) {
+	handler, _ := newTestHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(url.Values{}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+
+	handler.Login(rec, htmxRequest(req))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var payload map[string]string
+	if err := json.Unmarshal([]byte(rec.Header().Get("HX-Trigger")), &payload); err != nil {
+		t.Fatalf("decode HX-Trigger: %v", err)
+	}
+
+	if payload["showToast"] != csrfFailure {
+		t.Fatalf("expected CSRF toast, got %q", payload["showToast"])
+	}
+}
+
+func TestRequireCsrfMiddleware(t *testing.T) {
+	_, authSvc := newTestHandler(t)
+
+	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	session, _, err := authSvc.Authenticate(t.Context(), token)
+	if err != nil {
+		t.Fatalf("authenticate: %v", err)
+	}
+
+	protected := authSvc.RequireAuth(auth.RequireCsrf(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})))
+
+	// POST with valid session but no CSRF token -> 403.
+	req := httptest.NewRequest(http.MethodPost, "/admin/logout", nil)
+	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
+	rec := httptest.NewRecorder()
+
+	protected.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 without CSRF token, got %d", rec.Code)
+	}
+
+	// POST with valid session and CSRF header -> passes through.
+	req = httptest.NewRequest(http.MethodPost, "/admin/logout", nil)
+	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
+	req.Header.Set("X-CSRF-Token", session.CsrfToken)
+	rec = httptest.NewRecorder()
+
+	protected.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 with CSRF token, got %d", rec.Code)
+	}
+
+	// Safe methods pass without a token.
+	req = httptest.NewRequest(http.MethodGet, "/admin/dashboard", nil)
+	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
+	rec = httptest.NewRecorder()
+
+	protected.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for GET without CSRF token, got %d", rec.Code)
 	}
 }

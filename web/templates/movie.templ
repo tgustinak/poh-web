@@ -13,16 +13,29 @@ templ Klipy() {
 			<div class="mt-16 grid gap-8 lg:grid-cols-5 items-start">
 				<div class="lg:col-span-3">
 					<div id="klip-player-card" class="rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl shadow-black/60">
-						<div class="aspect-video">
-							<iframe
-								id="klip-player"
-								class="w-full h-full block"
-								src="https://www.youtube-nocookie.com/embed/7Msu0l_5Pi0?rel=0"
-								title="P.O.H – Nechcem zabudnúť"
-								allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-								allowfullscreen
-								loading="lazy"
-							></iframe>
+						<div class="aspect-video" id="klip-player-wrap" data-yt-embed data-current="7Msu0l_5Pi0">
+							<div data-yt-placeholder class="relative w-full h-full">
+								<img
+									src="https://i.ytimg.com/vi/7Msu0l_5Pi0/hqdefault.jpg"
+									alt="Náhľad videa Nechcem zabudnúť"
+									class="absolute inset-0 w-full h-full object-cover"
+									loading="lazy"
+								/>
+								<button
+									type="button"
+									class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 cursor-pointer"
+									data-id="7Msu0l_5Pi0"
+									data-title="Nechcem zabudnúť"
+									data-date="19. 6. 2026"
+									data-duration="4:24"
+									onclick="klipPlay(this)"
+								>
+									<span class="flex items-center justify-center w-16 h-16 rounded-full bg-amber-400 text-black transition hover:scale-105">
+										<svg class="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+									</span>
+									<span class="rounded-full border border-white/25 bg-black/70 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white/85">Načítať video</span>
+								</button>
+							</div>
 						</div>
 						<div class="px-6 py-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10">
 							<div class="min-w-0">
@@ -83,7 +96,11 @@ templ Klipy() {
 
 		function klipPlay(btn) {
 			const id = btn.dataset.id;
-			const player = document.getElementById('klip-player');
+			const wrap = document.getElementById('klip-player-wrap');
+			if (wrap) {
+				wrap.dataset.current = id;
+			}
+			const player = klipEnsurePlayer(true);
 			if (player) {
 				player.src = 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0&autoplay=1';
 			}
@@ -101,6 +118,53 @@ templ Klipy() {
 			}
 			document.querySelectorAll('.klip-row').forEach(el => el.classList.toggle('klip-row-active', el === btn));
 		}
+
+		function klipEnsurePlayer(autoplay) {
+			const wrap = document.getElementById('klip-player-wrap');
+			if (!wrap) {
+				return null;
+			}
+			let player = document.getElementById('klip-player');
+			if (!player) {
+				const id = wrap.dataset.current;
+				if (!id) {
+					return null;
+				}
+				player = document.createElement('iframe');
+				player.id = 'klip-player';
+				player.className = 'w-full h-full block';
+				player.title = 'Videoklip P.O.H';
+				player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+				player.allowFullscreen = true;
+				player.loading = 'lazy';
+				player.src = 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0' + (autoplay ? '&autoplay=1' : '');
+				const ph = wrap.querySelector('[data-yt-placeholder]');
+				if (ph) {
+					ph.remove();
+				}
+				wrap.appendChild(player);
+			}
+			return player;
+		}
+
+		(function klipConsentInit() {
+			function storedConsent() {
+				try {
+					return window.pohGetConsent ? window.pohGetConsent() : null;
+				} catch (e) {
+					return null;
+				}
+			}
+			const current = storedConsent();
+			if (current && current.media) {
+				klipEnsurePlayer(false);
+			}
+			document.addEventListener('poh:consent', (e) => {
+				if (e.detail && e.detail.media) {
+					klipEnsurePlayer(false);
+				}
+			});
+		})();
 	</script>
 }
 

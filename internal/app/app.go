@@ -1,5 +1,5 @@
 // Package app wires all HTTP routes of the application.
-// The returned mux is used by cmd/main.go and by integration tests,
+// The returned handler is used by cmd/main.go and by integration tests,
 // so both exercise the exact same routing, middleware and handlers.
 package app
 
@@ -12,18 +12,20 @@ import (
 	"github.com/a-h/templ"
 	"github.com/tgustinak/pohkapela.sk/internal/admin"
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
+	"github.com/tgustinak/pohkapela.sk/internal/server"
 	"github.com/tgustinak/pohkapela.sk/web/templates"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
-// Deps are the dependencies needed to build the application mux.
+// Deps are the dependencies needed to build the application handler.
 type Deps struct {
 	Auth         *auth.Service
 	AdminHandler *admin.Handler
 }
 
-// NewMux builds the full application route tree.
-func NewMux(deps Deps) *http.ServeMux {
+// NewMux builds the full application route tree wrapped
+// in the request logging middleware.
+func NewMux(deps Deps) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle(
@@ -48,67 +50,88 @@ func NewMux(deps Deps) *http.ServeMux {
 
 	mux.HandleFunc("GET /admin", deps.AdminHandler.LoginPage)
 	mux.HandleFunc("POST /admin/login", deps.AdminHandler.Login)
-	mux.HandleFunc("POST /admin/logout", deps.AdminHandler.Logout)
+	mux.HandleFunc("POST /admin/logout", protected(deps.Auth, deps.AdminHandler.Logout))
 
-	protected := func(handler http.HandlerFunc) http.HandlerFunc {
-		return deps.Auth.RequireAuth(handler).ServeHTTP
-	}
-
-	mux.HandleFunc("GET /admin/dashboard", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/dashboard", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminDashboard(), w)
+		renderTemplate(admintemplates.AdminDashboard(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/hudba", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/hudba", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminMusic(), w)
+		renderTemplate(admintemplates.AdminMusic(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/koncerty", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/koncerty", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminConcerts(), w)
+		renderTemplate(admintemplates.AdminConcerts(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/merch", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/merch", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminMerch(), w)
+		renderTemplate(admintemplates.AdminMerch(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/klipy", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/klipy", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminVideos(), w)
+		renderTemplate(admintemplates.AdminVideos(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/o-nas", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/o-nas", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminAbout(), w)
+		renderTemplate(admintemplates.AdminAbout(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/social", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/social", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminSocial(), w)
+		renderTemplate(admintemplates.AdminSocial(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/kontakt", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/kontakt", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminContact(), w)
+		renderTemplate(admintemplates.AdminContact(csrf(r)), w)
 	}))
 
-	mux.HandleFunc("GET /admin/organizatori", protected(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /admin/organizatori", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminOrganizers(), w)
+		renderTemplate(admintemplates.AdminOrganizers(csrf(r)), w)
 	}))
 
-	return mux
+	mux.HandleFunc("GET /admin/logy", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+
+		deps.AdminHandler.LogsPage(w, r)
+	}))
+
+	mux.HandleFunc("GET /admin/logy/entries", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+
+		deps.AdminHandler.LogsEntries(w, r)
+	}))
+
+	return server.Logger(mux)
+}
+
+// protected wraps a handler with authentication and CSRF protection.
+func protected(authSvc *auth.Service, handler http.HandlerFunc) http.HandlerFunc {
+	return authSvc.RequireAuth(auth.RequireCsrf(handler)).ServeHTTP
+}
+
+// csrf returns the session CSRF token for template rendering.
+// Behind RequireAuth it is always present.
+func csrf(r *http.Request) string {
+	token, _ := auth.CsrfFromRequest(r)
+
+	return token
 }
 
 // staticDir resolves web/static relative to this file,

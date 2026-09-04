@@ -11,23 +11,30 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (token_hash, user_id, expires_at)
-VALUES (?, ?, ?)
-RETURNING token_hash, user_id, expires_at, created_at
+INSERT INTO sessions (token_hash, user_id, csrf_token, expires_at)
+VALUES (?, ?, ?, ?)
+RETURNING token_hash, user_id, csrf_token, expires_at, created_at
 `
 
 type CreateSessionParams struct {
 	TokenHash string    `json:"token_hash"`
 	UserID    int64     `json:"user_id"`
+	CsrfToken string    `json:"csrf_token"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.TokenHash, arg.UserID, arg.ExpiresAt)
+	row := q.db.QueryRowContext(ctx, createSession,
+		arg.TokenHash,
+		arg.UserID,
+		arg.CsrfToken,
+		arg.ExpiresAt,
+	)
 	var i Session
 	err := row.Scan(
 		&i.TokenHash,
 		&i.UserID,
+		&i.CsrfToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
@@ -54,18 +61,8 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash string) error {
 	return err
 }
 
-const deleteSessionsByUserID = `-- name: DeleteSessionsByUserID :exec
-DELETE FROM sessions
-WHERE user_id = ?
-`
-
-func (q *Queries) DeleteSessionsByUserID(ctx context.Context, userID int64) error {
-	_, err := q.db.ExecContext(ctx, deleteSessionsByUserID, userID)
-	return err
-}
-
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
-SELECT token_hash, user_id, expires_at, created_at
+SELECT token_hash, user_id, csrf_token, expires_at, created_at
 FROM sessions
 WHERE token_hash = ?
 `
@@ -76,8 +73,54 @@ func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash string) (
 	err := row.Scan(
 		&i.TokenHash,
 		&i.UserID,
+		&i.CsrfToken,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listSessionsMissingCsrf = `-- name: ListSessionsMissingCsrf :many
+SELECT token_hash
+FROM sessions
+WHERE csrf_token = ''
+`
+
+func (q *Queries) ListSessionsMissingCsrf(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsMissingCsrf)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var token_hash string
+		if err := rows.Scan(&token_hash); err != nil {
+			return nil, err
+		}
+		items = append(items, token_hash)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateSessionCsrf = `-- name: UpdateSessionCsrf :exec
+UPDATE sessions
+SET csrf_token = ?
+WHERE token_hash = ?
+`
+
+type UpdateSessionCsrfParams struct {
+	CsrfToken string `json:"csrf_token"`
+	TokenHash string `json:"token_hash"`
+}
+
+func (q *Queries) UpdateSessionCsrf(ctx context.Context, arg UpdateSessionCsrfParams) error {
+	_, err := q.db.ExecContext(ctx, updateSessionCsrf, arg.CsrfToken, arg.TokenHash)
+	return err
 }

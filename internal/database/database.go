@@ -12,6 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
+	"github.com/tgustinak/pohkapela.sk/internal/db"
 )
 
 // Open connects to the SQLite database at path, creates the parent
@@ -41,6 +42,13 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 		_ = conn.Close()
 
 		return nil, err
+	}
+
+	// Drop expired sessions left over from previous runs.
+	if err := db.New(conn).DeleteExpiredSessions(ctx); err != nil {
+		_ = conn.Close()
+
+		return nil, fmt.Errorf("delete expired sessions: %w", err)
 	}
 
 	return conn, nil

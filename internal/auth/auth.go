@@ -44,63 +44,70 @@ func HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// Login verifies credentials and creates a new session token.
-// It returns ErrInvalidCredentials when the credentials do not match.
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+// Login verifies credentials and creates a new session.
+// It returns the session token (for the session cookie) and the CSRF
+// token bound to the session, or ErrInvalidCredentials on mismatch.
+func (s *Service) Login(ctx context.Context, email, password string) (sessionToken, csrfToken string, err error) {
 	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrInvalidCredentials
+			return "", "", ErrInvalidCredentials
 		}
 
-		return "", fmt.Errorf("find user: %w", err)
+		return "", "", fmt.Errorf("find user: %w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", ErrInvalidCredentials
+		return "", "", ErrInvalidCredentials
 	}
 
-	token, err := newToken()
+	sessionToken, err = newToken()
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+
+	csrfToken, err = newToken()
+	if err != nil {
+		return "", "", err
 	}
 
 	_, err = s.queries.CreateSession(ctx, db.CreateSessionParams{
-		TokenHash: hashToken(token),
+		TokenHash: hashToken(sessionToken),
 		UserID:    user.ID,
+		CsrfToken: csrfToken,
 		ExpiresAt: time.Now().UTC().Add(SessionTTL),
 	})
 	if err != nil {
-		return "", fmt.Errorf("create session: %w", err)
+		return "", "", fmt.Errorf("create session: %w", err)
 	}
 
-	return token, nil
+	return sessionToken, csrfToken, nil
 }
 
-// Authenticate resolves a session token to its user.
+// Authenticate resolves a session token to its session and user.
 // Expired sessions are deleted as a side effect.
-func (s *Service) Authenticate(ctx context.Context, token string) (*db.User, error) {
+func (s *Service) Authenticate(ctx context.Context, token string) (*db.Session, *db.User, error) {
 	if token == "" {
-		return nil, ErrInvalidCredentials
+		return nil, nil, ErrInvalidCredentials
 	}
 
 	session, err := s.queries.GetSessionByTokenHash(ctx, hashToken(token))
 	if err != nil {
-		return nil, fmt.Errorf("find session: %w", err)
+		return nil, nil, fmt.Errorf("find session: %w", err)
 	}
 
 	if time.Now().UTC().After(session.ExpiresAt) {
 		_ = s.queries.DeleteSession(ctx, session.TokenHash)
 
-		return nil, ErrInvalidCredentials
+		return nil, nil, ErrInvalidCredentials
 	}
 
 	user, err := s.queries.GetUserByID(ctx, session.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("find session user: %w", err)
+		return nil, nil, fmt.Errorf("find session user: %w", err)
 	}
 
-	return &user, nil
+	return &session, &user, nil
 }
 
 // Logout deletes the session belonging to token, if any.
@@ -114,6 +121,33 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	}
 
 	return nil
+}
+
+// BackfillSessionCsrf assigns fresh CSRF tokens to sessions created
+// before CSRF protection existed (empty csrf_token). Without this,
+// such sessions would fail every mutating request with no way
+// to recover through the UI. It returns the number of healed sessions.
+func (s *Service) BackfillSessionCsrf(ctx context.Context) (int, error) {
+	hashes, err := s.queries.ListSessionsMissingCsrf(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("list sessions missing csrf: %w", err)
+	}
+
+	for _, hash := range hashes {
+		token, err := newToken()
+		if err != nil {
+			return 0, err
+		}
+
+		if err := s.queries.UpdateSessionCsrf(ctx, db.UpdateSessionCsrfParams{
+			CsrfToken: token,
+			TokenHash: hash,
+		}); err != nil {
+			return 0, fmt.Errorf("update session csrf: %w", err)
+		}
+	}
+
+	return len(hashes), nil
 }
 
 // EnsureAdminUser creates the initial admin account when no users exist yet.
@@ -144,7 +178,7 @@ func (s *Service) EnsureAdminUser(ctx context.Context, email, password string) (
 	return true, nil
 }
 
-// newToken generates a random URL-safe session token.
+// newToken generates a random URL-safe token.
 func newToken() (string, error) {
 	var raw [32]byte
 	if _, err := rand.Read(raw[:]); err != nil {

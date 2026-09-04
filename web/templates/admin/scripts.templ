@@ -7,8 +7,12 @@ package templates
 //
 // htmx dispatches a showToast event on document.body which is rendered
 // as a toast. Success flows use HX-Redirect for full-page navigation.
-templ AdminScripts() {
+//
+// The csrf token is exposed via meta tag so htmx sends it back in the
+// X-CSRF-Token header on every mutating request (see RequireCsrf).
+templ AdminScripts(csrf string) {
 	<script src="/static/js/htmx.min.js"></script>
+	<meta name="csrf-token" content={ csrf }/>
 	<div id="admin-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] text-center rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-black shadow-2xl"></div>
 	<script>
 		function adminToast(msg) {
@@ -26,6 +30,12 @@ templ AdminScripts() {
 			const msg = typeof d === 'string' ? d : (d && (d.message || d.value)) || '';
 			if (msg) {
 				adminToast(msg);
+			}
+		});
+		document.body.addEventListener('htmx:configRequest', (e) => {
+			const m = document.querySelector('meta[name="csrf-token"]');
+			if (m) {
+				e.detail.headers['X-CSRF-Token'] = m.content;
 			}
 		});
 	</script>

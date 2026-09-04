@@ -6,7 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
@@ -18,15 +18,22 @@ import (
 func main() {
 	cfg := config.Load()
 
-	if cfg.AdminEmail == "" || cfg.AdminPassword == "" {
-		log.Fatal("ADMIN_EMAIL and ADMIN_PASSWORD must be set")
+	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !cfg.NeedsAdminSeed() {
+		slog.Error("ADMIN_EMAIL and ADMIN_PASSWORD must be set")
+		os.Exit(1)
 	}
 
 	ctx := context.Background()
 
 	sqlDB, err := database.Open(ctx, cfg.DatabasePath)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("open database", "error", err)
+		os.Exit(1)
 	}
 	defer sqlDB.Close()
 
@@ -34,15 +41,15 @@ func main() {
 
 	created, err := authSvc.EnsureAdminUser(ctx, cfg.AdminEmail, cfg.AdminPassword)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("seed admin user", "error", err)
+		os.Exit(1)
 	}
 
 	if created {
-		fmt.Printf("Created admin user %s\n", cfg.AdminEmail)
+		slog.Info("created admin user", "email", cfg.AdminEmail)
 
 		return
 	}
 
-	fmt.Printf("Admin user already exists, nothing to do (wanted %s)\n", cfg.AdminEmail)
-	os.Exit(0)
+	slog.Info("admin user already exists, nothing to do", "email", cfg.AdminEmail)
 }

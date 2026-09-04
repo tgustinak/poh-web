@@ -1,0 +1,87 @@
+package templates
+
+import (
+	"fmt"
+
+	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
+)
+
+templ AdminLogs(entries []logbuffer.Entry, next uint64, csrf string) {
+	@AdminLayout("Logy", "logy", csrf) {
+		@AdminPageHeader("Logy", "Varovania a chyby, najnovšie navrchu")
+		<div class="mb-4">
+			<button
+				class="admin-btn-row"
+			 hx-get="/admin/logy/entries"
+				hx-target="#log-entries"
+				hx-swap="innerHTML"
+			>Obnoviť</button>
+		</div>
+		<div class="admin-card !p-0 overflow-hidden">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40 border-b border-white/10">
+							<th class="px-4 py-3 font-semibold">Čas</th>
+							<th class="px-4 py-3 font-semibold">Level</th>
+							<th class="px-4 py-3 font-semibold">Správa</th>
+							<th class="px-4 py-3 font-semibold">Detaily</th>
+						</tr>
+					</thead>
+					<tbody id="log-entries">
+						@LogRows(entries, next, false)
+					</tbody>
+				</table>
+			</div>
+		</div>
+	}
+}
+
+// LogRows renders log table rows plus an infinite-scroll sentinel that
+// loads the next (older) page when revealed. next == 0 means no more
+// pages; isScroll marks responses to scroll requests (shows the end marker).
+templ LogRows(entries []logbuffer.Entry, next uint64, isScroll bool) {
+	if len(entries) == 0 && !isScroll {
+		<tr>
+			<td colspan="4" class="px-4 py-6 text-center text-white/40">Zatiaľ žiadne záznamy.</td>
+		</tr>
+	} else {
+		for _, e := range entries {
+			<tr class="border-b border-white/5 align-top">
+				<td class="px-4 py-2.5 whitespace-nowrap font-mono text-xs text-white/40">{ e.TimeLabel }</td>
+				<td class="px-4 py-2.5 whitespace-nowrap">
+					<span class={ "rounded-full px-2.5 py-0.5 text-xs font-bold", logLevelClass(e.Level) }>{ e.Level }</span>
+				</td>
+				<td class="px-4 py-2.5 text-white/85">{ e.Message }</td>
+				<td class="px-4 py-2.5 font-mono text-xs text-white/40 break-all">{ e.Attrs }</td>
+			</tr>
+		}
+		if next != 0 {
+			<tr
+				id="log-more"
+				hx-get={ fmt.Sprintf("/admin/logy/entries?before=%d", next) }
+				hx-trigger="revealed"
+				hx-swap="outerHTML"
+			>
+				<td colspan="4" class="px-4 py-4 text-center text-white/40 text-xs">Načítavam staršie…</td>
+			</tr>
+		} else if isScroll {
+			<tr>
+				<td colspan="4" class="px-4 py-4 text-center text-white/30 text-xs">Koniec záznamov.</td>
+			</tr>
+		}
+	}
+}
+
+func logLevelClass(level string) string {
+	switch level {
+	case "ERROR":
+		return "bg-red-400/15 text-red-300"
+	case "WARN":
+		return "bg-amber-400/15 text-amber-300"
+	case "DEBUG":
+		return "bg-white/10 text-white/50"
+	default:
+		return "bg-emerald-400/15 text-emerald-300"
+	}
+}
