@@ -15,21 +15,7 @@ templ Home() {
 			</div>
 		</section>
 		<!-- music -->
-		<section id="hudba" class="min-h-screen bg-neutral-950">
-			<div class="container mx-auto min-h-screen flex flex-col items-center justify-center">
-				<h2 class="text-4xl mb-12 block font-bold tracking-wide text-white/90">Hudba</h2>
-				<iframe
-					data-testid="embed-iframe"
-					style="border-radius:12px"
-					src="https://open.spotify.com/embed/artist/2UPXTy1tjnlfKQbci8XjTq?utm_source=generator&theme=0"
-					width="100%"
-					height="352"
-					allowfullscreen=""
-					allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-					loading="lazy"
-				></iframe>
-			</div>
-		</section>
+		@Music()
 		<!-- concerts -->
 		@Concerts([]concerts.Concert{
 			{Name: "Kubínsky Jarmok", Day: 18, Month: "Jan"},
