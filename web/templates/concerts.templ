@@ -3,20 +3,77 @@ package templates
 import "github.com/tgustinak/pohkapela.sk/internal/concerts"
 
 templ Concerts(concerts []concerts.Concert) {
-	<section id="koncerty" class="min-h-screen bg-cover bg-right" style="background-image: url(/static/images/concerts.png)">
-		<div class="container mx-auto min-h-screen flex flex-col justify-center">
-			<div class="w-1/2">
-				<h2 class="mb-12 text-4xl font-bold tracking-wide text-white/90">Najbližšie sa vidíme:</h2>
-				for _, c := range concerts {
-					<div class="flex mt-8">
-						<div class="px-12 flex flex-col items-center justify-center">
-							<span class="text-2xl font-bold border-b-2 border-b-amber-400 uppercase">{ c.Month }</span>
-							<span class="text-3xl font-bold">{ c.Day }</span>
+	<section id="koncerty" class="relative overflow-hidden bg-black border-t border-white/5">
+		<img
+			src="/static/images/concerts.png"
+			alt=""
+			aria-hidden="true"
+			class="absolute inset-0 h-full w-full object-cover object-right"
+			loading="lazy"
+		/>
+		<div class="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/20"></div>
+		<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
+		<div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 min-h-[90vh] flex flex-col justify-center">
+			<div class="max-w-2xl">
+				<p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Naživo</p>
+				<h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-wide text-white/90">Koncerty</h2>
+				<p class="mt-4 text-white/60">
+					Najbližšie sa vidíme — príď si nás vypočuť naživo.
+				</p>
+			</div>
+			if len(concerts) == 0 {
+				<div class="mt-12 max-w-2xl rounded-2xl border border-dashed border-white/20 bg-black/60 backdrop-blur px-6 py-10 text-center">
+					<p class="text-lg font-semibold text-white/90">Zatiaľ nemáme naplánované koncerty</p>
+					<p class="mt-2 text-sm text-white/50">Sleduj nás na sociálnych sieťach — nové termíny čoskoro pribudnú.</p>
+				</div>
+			} else {
+				<div class="mt-12 max-w-2xl">
+					@ConcertFeatured(concerts[0])
+					if len(concerts) > 1 {
+						<div class="mt-4 rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
+							<ul class="divide-y divide-white/10">
+								for _, c := range concerts[1:] {
+									@ConcertRow(c)
+								}
+							</ul>
 						</div>
-						<div class="flex items-center font-bold text-xl">{ c.Name }</div>
-					</div>
-				}
+					}
+				</div>
+			}
+			<div class="mt-10 max-w-2xl">
+				<a href="#kontakt" class="group inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-white/60 transition hover:text-amber-400">
+					Organizuješ akciu? Ozvi sa nám
+					<span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+				</a>
 			</div>
 		</div>
 	</section>
+}
+
+templ ConcertFeatured(c concerts.Concert) {
+	<div class="relative rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-400/10 via-black/70 to-black/70 backdrop-blur px-6 py-6 sm:px-8 flex items-center gap-6 shadow-2xl shadow-black/60">
+		<span class="absolute -top-3 left-6 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-black">Najbližšie</span>
+		<div class="shrink-0 w-16 text-center rounded-xl border border-amber-400/40 bg-amber-400/10 py-2.5">
+			<p class="text-[11px] font-bold uppercase tracking-widest text-amber-400">{ c.Month }</p>
+			<p class="text-2xl font-bold text-white leading-none mt-1">{ c.Day }</p>
+		</div>
+		<div class="min-w-0">
+			<p class="text-xl sm:text-2xl font-bold text-white truncate">{ c.Name }</p>
+			<p class="mt-1 text-sm text-white/50">P.O.H • naživo</p>
+		</div>
+	</div>
+}
+
+templ ConcertRow(c concerts.Concert) {
+	<li class="group flex items-center gap-5 px-5 sm:px-6 py-4 transition-colors duration-300 hover:bg-white/5">
+		<div class="shrink-0 w-14 text-center rounded-xl border border-white/10 bg-white/5 py-2">
+			<p class="text-[11px] font-bold uppercase tracking-widest text-amber-400">{ c.Month }</p>
+			<p class="text-xl font-bold text-white leading-none mt-1">{ c.Day }</p>
+		</div>
+		<div class="min-w-0 flex-1">
+			<p class="font-semibold text-white/90 truncate transition-colors group-hover:text-white">{ c.Name }</p>
+			<p class="mt-0.5 text-xs uppercase tracking-wider text-white/40">P.O.H • naživo</p>
+		</div>
+		<span class="shrink-0 h-px w-8 bg-white/15 transition-all duration-300 group-hover:w-12 group-hover:bg-amber-400"></span>
+	</li>
 }
