@@ -1,13 +1,13 @@
 package templates
 
 templ Navigation() {
-	<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+	<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent border-b border-transparent">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<div class="flex items-center justify-between h-20">
-				<a href="/" class="transition-opacity duration-300 hover:opacity-80">
-					<img src="/static/images/logo.png" alt="P.O.H" class="h-12 w-auto"/>
+			<div id="navbar-inner" class="relative z-10 flex items-center justify-between h-20 transition-all duration-300">
+				<a href="#domov" class="transition-transform duration-300 hover:scale-105">
+					<img id="navbar-logo" src="/static/images/logo.png" alt="P.O.H" class="h-12 w-auto transition-all duration-300"/>
 				</a>
-				<div class="hidden md:flex items-center space-x-1">
+				<div class="hidden lg:flex items-center space-x-1">
 					<a href="#domov" class="nav-link">Domov</a>
 					<a href="#hudba" class="nav-link">Hudba</a>
 					<a href="#koncerty" class="nav-link">Koncerty</a>
@@ -18,9 +18,18 @@ templ Navigation() {
 					<a href="#pre-organizatorov" class="nav-link">Pre organizátorov</a>
 					<a href="#kontakt" class="nav-link">Kontakt</a>
 				</div>
+				<div class="hidden lg:block">
+					<a
+						href="#koncerty"
+						class="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20"
+					>
+						<span class="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></span>
+						Koncerty
+					</a>
+				</div>
 				<button
 					id="mobile-menu-btn"
-					class="md:hidden relative w-10 h-10 flex items-center justify-center text-white focus:outline-none"
+					class="lg:hidden relative z-10 w-10 h-10 flex items-center justify-center text-white focus:outline-none"
 					aria-label="Toggle menu"
 				>
 					<span id="hamburger-icon" class="block">
@@ -31,60 +40,74 @@ templ Navigation() {
 				</button>
 			</div>
 		</div>
-		<div id="mobile-menu" class="md:hidden hidden">
-			<div class="bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 py-6 space-y-1">
-				<a href="#domov" class="mobile-nav-link">Domov</a>
-				<a href="#hudba" class="mobile-nav-link">Hudba</a>
-				<a href="#koncerty" class="mobile-nav-link">Koncerty</a>
-				<a href="#merch" class="mobile-nav-link">Merch</a>
-				<a href="#klipy" class="mobile-nav-link">Klipy</a>
-				<a href="#o-nas" class="mobile-nav-link">O nás</a>
-				<a href="#fotky" class="mobile-nav-link">Fotky</a>
-				<a href="#pre-organizatorov" class="mobile-nav-link">Pre organizátorov</a>
-				<a href="#kontakt" class="mobile-nav-link">Kontakt</a>
+		<div id="mobile-menu" class="lg:hidden hidden fixed inset-0 top-0 bg-black/95 backdrop-blur-xl">
+			<div class="flex flex-col items-center justify-center h-full gap-1 px-8 pt-10">
+				<a href="#domov" class="mobile-nav-big" style="animation-delay:20ms">Domov</a>
+				<a href="#hudba" class="mobile-nav-big" style="animation-delay:60ms">Hudba</a>
+				<a href="#koncerty" class="mobile-nav-big" style="animation-delay:100ms">Koncerty</a>
+				<a href="#merch" class="mobile-nav-big" style="animation-delay:140ms">Merch</a>
+				<a href="#klipy" class="mobile-nav-big" style="animation-delay:180ms">Klipy</a>
+				<a href="#o-nas" class="mobile-nav-big" style="animation-delay:220ms">O nás</a>
+				<a href="#fotky" class="mobile-nav-big" style="animation-delay:260ms">Fotky</a>
+				<a href="#pre-organizatorov" class="mobile-nav-big" style="animation-delay:300ms">Pre organizátorov</a>
+				<a href="#kontakt" class="mobile-nav-big" style="animation-delay:340ms">Kontakt</a>
+				<a href="#koncerty" class="mobile-nav-big-cta" style="animation-delay:400ms">Koncerty →</a>
 			</div>
 		</div>
 	</nav>
 	<script>
-  const navbar = document.getElementById('navbar');
-  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-  const mobileMenu = document.getElementById('mobile-menu');
-  const hamburgerSpans = document.querySelectorAll('#hamburger-icon span');
-  let isMenuOpen = false;
+		const navbar = document.getElementById('navbar');
+		const navbarInner = document.getElementById('navbar-inner');
+		const navbarLogo = document.getElementById('navbar-logo');
+		const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+		const mobileMenu = document.getElementById('mobile-menu');
+		const hamburgerSpans = document.querySelectorAll('#hamburger-icon span');
+		let isMenuOpen = false;
 
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-      navbar?.classList.add('bg-black/90', 'backdrop-blur-lg', 'shadow-lg', 'shadow-black/20');
-      navbar?.classList.remove('bg-transparent');
-    } else {
-      navbar?.classList.remove('bg-black/90', 'backdrop-blur-lg', 'shadow-lg', 'shadow-black/20');
-      navbar?.classList.add('bg-transparent');
-    }
-  });
+		function setScrolled(scrolled) {
+			navbar?.classList.toggle('bg-black/80', scrolled);
+			navbar?.classList.toggle('backdrop-blur-xl', scrolled);
+			navbar?.classList.toggle('border-white/10', scrolled);
+			navbar?.classList.toggle('border-transparent', !scrolled);
+			navbar?.classList.toggle('shadow-lg', scrolled);
+			navbar?.classList.toggle('shadow-black/30', scrolled);
+			navbarInner?.classList.toggle('h-20', !scrolled);
+			navbarInner?.classList.toggle('h-16', scrolled);
+			navbarLogo?.classList.toggle('h-12', !scrolled);
+			navbarLogo?.classList.toggle('h-10', scrolled);
+		}
 
-  mobileMenuBtn?.addEventListener('click', () => {
-    isMenuOpen = !isMenuOpen;
-    mobileMenu?.classList.toggle('hidden');
+		window.addEventListener('scroll', () => setScrolled(window.scrollY > 40), { passive: true });
+		setScrolled(window.scrollY > 40);
 
-    if (isMenuOpen) {
-      hamburgerSpans[0]?.classList.add('rotate-45', 'translate-y-2');
-      hamburgerSpans[1]?.classList.add('opacity-0');
-      hamburgerSpans[2]?.classList.add('-rotate-45', '-translate-y-2');
-    } else {
-      hamburgerSpans[0]?.classList.remove('rotate-45', 'translate-y-2');
-      hamburgerSpans[1]?.classList.remove('opacity-0');
-      hamburgerSpans[2]?.classList.remove('-rotate-45', '-translate-y-2');
-    }
-  });
+		function setMenu(open) {
+			isMenuOpen = open;
+			mobileMenu?.classList.toggle('hidden', !open);
+			document.body.classList.toggle('overflow-hidden', open);
+			hamburgerSpans[0]?.classList.toggle('rotate-45', open);
+			hamburgerSpans[0]?.classList.toggle('translate-y-2', open);
+			hamburgerSpans[1]?.classList.toggle('opacity-0', open);
+			hamburgerSpans[2]?.classList.toggle('-rotate-45', open);
+			hamburgerSpans[2]?.classList.toggle('-translate-y-2', open);
+		}
 
-  document.querySelectorAll('.mobile-nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-      isMenuOpen = false;
-      mobileMenu?.classList.add('hidden');
-      hamburgerSpans[0]?.classList.remove('rotate-45', 'translate-y-2');
-      hamburgerSpans[1]?.classList.remove('opacity-0');
-      hamburgerSpans[2]?.classList.remove('-rotate-45', '-translate-y-2');
-    });
-  });
-</script>
+		mobileMenuBtn?.addEventListener('click', () => setMenu(!isMenuOpen));
+
+		document.querySelectorAll('#mobile-menu a').forEach(link => {
+			link.addEventListener('click', () => setMenu(false));
+		});
+
+		const desktopLinks = document.querySelectorAll('#navbar .nav-link');
+		const sectionObserver = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting) {
+					desktopLinks.forEach(a => {
+						a.classList.toggle('nav-link-active', a.getAttribute('href') === '#' + entry.target.id);
+					});
+				}
+			});
+		}, { rootMargin: '-40% 0px -55% 0px' });
+
+		document.querySelectorAll('section[id]').forEach(s => sectionObserver.observe(s));
+	</script>
 }

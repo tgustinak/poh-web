@@ -10,6 +10,10 @@
   body {
     @apply bg-black text-white;
   }
+
+  section[id] {
+    scroll-margin-top: 4rem;
+  }
 }
 
 @layer components {
@@ -28,6 +32,37 @@
 
   .mobile-nav-link {
     @apply block px-4 py-3 text-base font-medium tracking-wide text-white/80 uppercase transition-all duration-300 hover:text-amber-400 hover:pl-6 border-l-2 border-transparent hover:border-amber-400;
+  }
+
+  .nav-link-active {
+    @apply text-amber-400;
+  }
+
+  .nav-link-active::after {
+    @apply w-3/4;
+  }
+
+  .mobile-nav-big {
+    @apply px-4 py-2 text-2xl font-bold tracking-wide text-white/85 uppercase transition-colors duration-300 hover:text-amber-400;
+    opacity: 0;
+    animation: nav-fade-up 0.4s ease forwards;
+  }
+
+  .mobile-nav-big-cta {
+    @apply mt-4 rounded-full bg-amber-400 px-8 py-3 text-base font-bold uppercase tracking-widest text-black transition hover:bg-amber-300;
+    opacity: 0;
+    animation: nav-fade-up 0.4s ease forwards;
+  }
+
+  @keyframes nav-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .merch-pill {
