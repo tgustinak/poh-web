@@ -1,0 +1,26 @@
+package templates
+
+templ AdminAbout() {
+	@AdminLayout("O nás", "o-nas") {
+		@AdminPageHeader("O nás", "Text sekcie O nás na webe")
+		<div class="admin-card">
+			<form data-demo class="flex flex-col gap-4">
+				<div>
+					<label class="admin-label" for="about-p1">Odstavec 1</label>
+					<textarea id="about-p1" rows="6" class="admin-input">P.O.H je slovenská folk-rocková kapela, ktorá pochádza z Dolného Kubína a ktorej vznik nebol okamihom, ale procesom, takže jeho presné datovanie nie je uchopiteľné; pár rokov to však už bude… V zložení dve gitary, basgitara a bicie si prešla mnohými koncertmi, či už na klubových pódiách alebo menších i väčších festivaloch v SR a ČR.</textarea>
+				</div>
+				<div>
+					<label class="admin-label" for="about-p2">Odstavec 2</label>
+					<textarea id="about-p2" rows="6" class="admin-input">Na konte má štyri demo albumy: Posledný smiech, Stodola, Deň za dňom, Večnosť a jeden štúdiový Na konci sveta (2021). Hrá výsostne vlastnú produkciu a všetky jej texty sú v rodnej slovenčine, čo je pre kapelu úplne prirodzené a poslucháčmi (súdiac podľa ich ohlasov) oceňované.</textarea>
+				</div>
+				<div>
+					<label class="admin-label" for="about-quote">Citát</label>
+					<textarea id="about-quote" rows="2" class="admin-input">Obojstranný prúd energie na koncertoch je pre P.O.H na nezaplatenie – kto to zažil, ten vie…</textarea>
+				</div>
+				<div>
+					<button type="submit" class="admin-btn">Uložiť zmeny</button>
+				</div>
+			</form>
+		</div>
+	}
+}

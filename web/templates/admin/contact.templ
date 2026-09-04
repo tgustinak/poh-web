@@ -1,0 +1,37 @@
+package templates
+
+templ AdminContact() {
+	@AdminLayout("Kontakt", "kontakt") {
+		@AdminPageHeader("Kontakt", "Manažérka a kontaktné údaje v sekcii Kontakt")
+		<div class="admin-card">
+			<form data-demo class="grid gap-4 sm:grid-cols-2">
+				<div class="sm:col-span-2 flex items-center gap-5">
+					<img src="/static/images/manager.webp" alt="Aktuálna fotka" class="w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
+					<div>
+						<label class="admin-label" for="contact-photo">Nová fotka</label>
+						<input id="contact-photo" type="file" accept="image/*" class="admin-input"/>
+					</div>
+				</div>
+				<div>
+					<label class="admin-label" for="contact-name">Meno</label>
+					<input id="contact-name" type="text" value="Jana Testová" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="contact-role">Pozícia</label>
+					<input id="contact-role" type="text" value="Manažérka" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="contact-phone">Telefón</label>
+					<input id="contact-phone" type="tel" value="+421 900 123 456" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="contact-email">E-mail</label>
+					<input id="contact-email" type="email" value="kontakt@example.com" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="admin-btn">Uložiť zmeny</button>
+				</div>
+			</form>
+		</div>
+	}
+}

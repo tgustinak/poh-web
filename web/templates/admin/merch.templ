@@ -1,0 +1,63 @@
+package templates
+
+templ AdminMerch() {
+	@AdminLayout("Merch", "merch") {
+		@AdminPageHeader("Merch", "Produkt v sekcii Merch")
+		<div class="admin-card">
+			<div class="flex flex-col sm:flex-row gap-6">
+				<img src="/static/images/merch-tricko-predok.jpg" alt="Tričko Život – predok" class="w-40 aspect-[5/4] rounded-xl object-cover object-top border border-white/10"/>
+				<img src="/static/images/merch-tricko-chrbat.jpg" alt="Tričko Život – chrbat" class="w-40 aspect-[5/4] rounded-xl object-cover object-top border border-white/10"/>
+				<div>
+					<h2 class="text-xl font-bold text-white">Tričko „Život“</h2>
+					<p class="mt-1 text-sm text-white/50">Veľkosti: S, M, L, XL, XXL</p>
+					<button type="button" class="admin-btn-danger mt-4" data-demo-delete>Zmazať produkt</button>
+				</div>
+			</div>
+		</div>
+		<div class="admin-card mt-6">
+			<h2 class="text-xl font-bold text-white">Upraviť produkt</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+				<div>
+					<label class="admin-label" for="merch-name">Názov</label>
+					<input id="merch-name" type="text" value="Tričko „Život“" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label">Veľkosti</label>
+					<div class="flex flex-wrap gap-2 pt-1">
+						@AdminSizeCheck("S", false)
+						@AdminSizeCheck("M", true)
+						@AdminSizeCheck("L", true)
+						@AdminSizeCheck("XL", true)
+						@AdminSizeCheck("XXL", false)
+					</div>
+				</div>
+				<div class="sm:col-span-2">
+					<label class="admin-label" for="merch-desc">Popis</label>
+					<textarea id="merch-desc" rows="3" class="admin-input">Čierne tričko s prednou potlačou z albumu Život — dva portréty pri západe slnka. Vzadu malé logo p.o.h pod krkom.</textarea>
+				</div>
+				<div>
+					<label class="admin-label" for="merch-front">Foto – predok</label>
+					<input id="merch-front" type="file" accept="image/*" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="merch-back">Foto – chrbat</label>
+					<input id="merch-back" type="file" accept="image/*" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="admin-btn">Uložiť zmeny</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminSizeCheck(size string, checked bool) {
+	<label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-bold text-white/70">
+		if checked {
+			<input type="checkbox" checked class="accent-amber-400"/>
+		} else {
+			<input type="checkbox" class="accent-amber-400"/>
+		}
+		{ size }
+	</label>
+}

@@ -1,0 +1,65 @@
+package templates
+
+templ AdminConcerts() {
+	@AdminLayout("Koncerty", "koncerty") {
+		@AdminPageHeader("Koncerty", "Nadchádzajúce termíny, prvý v zozname = najbližší")
+		<div class="admin-card">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">#</th>
+							<th class="pb-3 pr-4 font-semibold">Názov</th>
+							<th class="pb-3 pr-4 font-semibold">Deň</th>
+							<th class="pb-3 pr-4 font-semibold">Mesiac</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						@AdminConcertRow("1", "Kubínsky Jarmok", "18", "Jan")
+						@AdminConcertRow("2", "Kubínsky Jarmok", "11", "Feb")
+						@AdminConcertRow("3", "Kubínsky Jarmok", "1", "Mar")
+						@AdminConcertRow("4", "Kubínsky Jarmok", "8", "Apr")
+						@AdminConcertRow("5", "Kubínsky Jarmok", "18", "Sep")
+						@AdminConcertRow("6", "Gustove Narodky", "26", "Oct")
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať koncert</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-3">
+				<div class="sm:col-span-3">
+					<label class="admin-label" for="concert-name">Názov</label>
+					<input id="concert-name" type="text" placeholder="Názov akcie / miesta" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="concert-day">Deň</label>
+					<input id="concert-day" type="number" min="1" max="31" placeholder="18" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="concert-month">Mesiac</label>
+					<input id="concert-month" type="text" placeholder="Sep" class="admin-input"/>
+				</div>
+				<div class="flex items-end">
+					<button type="submit" class="admin-btn">Pridať koncert</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminConcertRow(order string, name string, day string, month string) {
+	<tr class="border-t border-white/10">
+		<td class="py-3 pr-4 text-white/40">{ order }</td>
+		<td class="py-3 pr-4 font-semibold text-white">{ name }</td>
+		<td class="py-3 pr-4 text-white/70">{ day }</td>
+		<td class="py-3 pr-4 text-white/70">{ month }</td>
+		<td class="py-3">
+			<div class="flex justify-end gap-2">
+				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+			</div>
+		</td>
+	</tr>
+}

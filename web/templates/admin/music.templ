@@ -1,0 +1,67 @@
+package templates
+
+templ AdminMusic() {
+	@AdminLayout("Hudba", "hudba") {
+		@AdminPageHeader("Hudba – diskografia", "Albumy v sekcii Hudba, od najnovšieho")
+		<div class="admin-card">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">Obal</th>
+							<th class="pb-3 pr-4 font-semibold">Názov</th>
+							<th class="pb-3 pr-4 font-semibold">Rok</th>
+							<th class="pb-3 pr-4 font-semibold">Štítok</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						@AdminAlbumRow("/static/images/album-zivot.webp", "Život", "2026", "Novinka")
+						@AdminAlbumRow("/static/images/album-na-konci-sveta.jpg", "Na konci sveta", "2021", "Debut")
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať album</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+				<div>
+					<label class="admin-label" for="album-title">Názov</label>
+					<input id="album-title" type="text" placeholder="Názov albumu" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="album-year">Rok</label>
+					<input id="album-year" type="number" placeholder="2026" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="album-badge">Štítok</label>
+					<input id="album-badge" type="text" placeholder="Novinka" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="album-cover">Obal (štvorec)</label>
+					<input id="album-cover" type="file" accept="image/*" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="admin-btn">Pridať album</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminAlbumRow(cover string, title string, year string, badge string) {
+	<tr class="border-t border-white/10">
+		<td class="py-3 pr-4">
+			<img src={ cover } alt={ "Obal " + title } class="w-12 h-12 rounded-lg object-cover"/>
+		</td>
+		<td class="py-3 pr-4 font-semibold text-white">{ title }</td>
+		<td class="py-3 pr-4 text-white/70">{ year }</td>
+		<td class="py-3 pr-4"><span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{ badge }</span></td>
+		<td class="py-3">
+			<div class="flex justify-end gap-2">
+				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+			</div>
+		</td>
+	</tr>
+}

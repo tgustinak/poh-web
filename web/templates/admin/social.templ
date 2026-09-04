@@ -1,0 +1,63 @@
+package templates
+
+templ AdminSocial() {
+	@AdminLayout("Social", "social") {
+		@AdminPageHeader("Social", "Linky na sociálne siete a streamovacie služby")
+		<div class="admin-card">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">Sieť</th>
+							<th class="pb-3 pr-4 font-semibold">Zobrazovaný názov</th>
+							<th class="pb-3 pr-4 font-semibold">URL</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						@AdminSocialRow("Facebook", "kapelaPOH", "https://www.facebook.com/kapelaPOH/")
+						@AdminSocialRow("Instagram", "@kapela_p.o.h", "https://www.instagram.com/kapela_p.o.h/")
+						@AdminSocialRow("YouTube", "@p.o.h6377", "https://www.youtube.com/@p.o.h6377")
+						@AdminSocialRow("Spotify", "P.O.H", "https://open.spotify.com/artist/79t3KrQngTRDooegKsR4cw")
+						@AdminSocialRow("YouTube Music", "P.O.H", "https://music.youtube.com/channel/UCWK7N2Ir9r8YuyMXScgs0dw")
+						@AdminSocialRow("Apple Music", "P.O.H", "https://music.apple.com/us/artist/p-o-h/6788148500")
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať sieť / službu</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+				<div>
+					<label class="admin-label" for="social-name">Názov</label>
+					<input id="social-name" type="text" placeholder="napr. TikTok" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="social-handle">Zobrazovaný názov / handle</label>
+					<input id="social-handle" type="text" placeholder="napr. @kapela" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<label class="admin-label" for="social-url">URL</label>
+					<input id="social-url" type="url" placeholder="https://…" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="admin-btn">Pridať</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminSocialRow(name string, handle string, url string) {
+	<tr class="border-t border-white/10">
+		<td class="py-3 pr-4 font-semibold text-white">{ name }</td>
+		<td class="py-3 pr-4 text-white/70">{ handle }</td>
+		<td class="py-3 pr-4 text-white/50 break-all max-w-64">{ url }</td>
+		<td class="py-3">
+			<div class="flex justify-end gap-2">
+				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger" data-demo-delete>Odobrať</button>
+			</div>
+		</td>
+	</tr>
+}

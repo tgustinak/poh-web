@@ -1,0 +1,88 @@
+package templates
+
+templ AdminOrganizers() {
+	@AdminLayout("Organizátori", "organizatori") {
+		@AdminPageHeader("Organizátori", "Súbory na stránke Pre organizátorov")
+		<div class="admin-card">
+			<h2 class="text-xl font-bold text-white">Dokumenty</h2>
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">Súbor</th>
+							<th class="pb-3 pr-4 font-semibold">Veľkosť</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						@AdminFileRow("Technický rider", "poh-rider.pdf", "120 kB")
+						@AdminFileRow("Input list", "poh-input-list.pdf", "2,8 MB")
+						@AdminFileRow("Logo v krivkách", "poh-logo.pdf", "408 kB")
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="admin-card mt-6">
+			<h2 class="text-xl font-bold text-white">Promo fotky</h2>
+			<div class="mt-4 grid gap-4 sm:grid-cols-2">
+				@AdminPhotoCard("/static/images/promo-1-preview.webp", "poh-promo-1.png", "PNG • 2105 × 2560")
+				@AdminPhotoCard("/static/images/promo-2-preview.webp", "poh-promo-2.jpg", "JPG • 2560 × 2560")
+			</div>
+		</div>
+		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať súbor / fotku</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+				<div>
+					<label class="admin-label" for="file-name">Názov</label>
+					<input id="file-name" type="text" placeholder="napr. Stage plan" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="file-kind">Typ</label>
+					<select id="file-kind" class="admin-input">
+						<option>Dokument</option>
+						<option>Fotka</option>
+					</select>
+				</div>
+				<div class="sm:col-span-2">
+					<label class="admin-label" for="file-upload">Súbor</label>
+					<input id="file-upload" type="file" class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="admin-btn">Nahrať</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminFileRow(name string, filename string, size string) {
+	<tr class="border-t border-white/10">
+		<td class="py-3 pr-4">
+			<span class="block font-semibold text-white">{ name }</span>
+			<span class="block text-xs text-white/40">{ filename }</span>
+		</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ size }</td>
+		<td class="py-3">
+			<div class="flex justify-end gap-2">
+				<label class="admin-btn-row cursor-pointer">
+					Nahradiť
+					<input type="file" class="hidden" onchange="adminToast('Demo režim — napoj na backend')"/>
+				</label>
+				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+			</div>
+		</td>
+	</tr>
+}
+
+templ AdminPhotoCard(preview string, filename string, meta string) {
+	<div class="rounded-xl overflow-hidden border border-white/10">
+		<img src={ preview } alt={ filename } class="w-full h-56 object-cover object-top"/>
+		<div class="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/10">
+			<div class="min-w-0">
+				<p class="text-sm font-semibold text-white truncate">{ filename }</p>
+				<p class="text-xs text-white/40">{ meta }</p>
+			</div>
+			<button type="button" class="admin-btn-row-danger shrink-0" data-demo-delete>Zmazať</button>
+		</div>
+	</div>
+}

@@ -1,0 +1,68 @@
+package templates
+
+templ AdminVideos() {
+	@AdminLayout("Klipy", "klipy") {
+		@AdminPageHeader("Klipy – videoklipy", "Poradie v playliste, od najnovšieho")
+		<div class="admin-card">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">#</th>
+							<th class="pb-3 pr-4 font-semibold">Názov</th>
+							<th class="pb-3 pr-4 font-semibold">Dátum</th>
+							<th class="pb-3 pr-4 font-semibold">Dĺžka</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						@AdminVideoRow("1", "Nechcem zabudnúť", "19. 6. 2026", "4:24", "7Msu0l_5Pi0")
+						@AdminVideoRow("2", "Kubín", "16. 4. 2025", "3:20", "ylJqEmM-Sjo")
+						@AdminVideoRow("3", "Mám otázku", "13. 2. 2024", "3:42", "BB56qBn2wtA")
+						@AdminVideoRow("4", "Nenechaj ma ísť", "28. 1. 2024", "3:38", "AxT7ni2COK4")
+						@AdminVideoRow("5", "Vrátiť sa", "12. 7. 2023", "4:42", "7tgNr5sWXds")
+						@AdminVideoRow("6", "Na konci sveta", "23. 3. 2023", "4:34", "AWmVqHcHn5c")
+						@AdminVideoRow("7", "Spievaj mi", "10. 2. 2022", "4:24", "KKd_lv_zC5E")
+						@AdminVideoRow("8", "Voz veľkých hviezd", "25. 8. 2019", "5:11", "Qx7rHKYHRAE")
+						@AdminVideoRow("9", "Prečo", "17. 11. 2018", "4:42", "nxsVT3s9ibM")
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať videoklip</h2>
+			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+				<div class="sm:col-span-2">
+					<label class="admin-label" for="video-url">YouTube URL</label>
+					<input id="video-url" type="url" placeholder="https://www.youtube.com/watch?v=…" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="video-title">Názov (nepovinné – načíta sa z YouTube)</label>
+					<input id="video-title" type="text" placeholder="Názov klipu" class="admin-input"/>
+				</div>
+				<div class="flex items-end">
+					<button type="submit" class="admin-btn">Pridať videoklip</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ AdminVideoRow(order string, title string, date string, duration string, videoID string) {
+	<tr class="border-t border-white/10">
+		<td class="py-3 pr-4 text-white/40">{ order }</td>
+		<td class="py-3 pr-4">
+			<span class="block font-semibold text-white">{ title }</span>
+			<span class="block text-xs text-white/40">{ videoID }</span>
+		</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ date }</td>
+		<td class="py-3 pr-4 text-white/70">{ duration }</td>
+		<td class="py-3">
+			<div class="flex justify-end gap-2">
+				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">↑</button>
+				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">↓</button>
+				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+			</div>
+		</td>
+	</tr>
+}
