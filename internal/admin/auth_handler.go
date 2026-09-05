@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
+	"github.com/tgustinak/pohkapela.sk/internal/htmx"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
@@ -47,8 +48,8 @@ func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 // full-page responses.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		if auth.IsHtmxRequest(r) {
-			auth.Toast(w, "Nepodarilo sa spracovať formulár, skús to znova.")
+		if htmx.IsHtmxRequest(r) {
+			htmx.Toast(w, "Nepodarilo sa spracovať formulár, skús to znova.")
 
 			return
 		}
@@ -60,8 +61,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !auth.ValidCsrf(r, auth.CsrfCookieValue(r)) {
-		if auth.IsHtmxRequest(r) {
-			auth.Toast(w, auth.CsrfFailureMessage)
+		if htmx.IsHtmxRequest(r) {
+			htmx.Toast(w, auth.CsrfFailureMessage)
 
 			return
 		}
@@ -76,8 +77,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			slog.Warn("admin login failed", "email", r.FormValue("email"))
 
-			if auth.IsHtmxRequest(r) {
-				auth.Toast(w, "Nesprávny e-mail alebo heslo.")
+			if htmx.IsHtmxRequest(r) {
+				htmx.Toast(w, "Nesprávny e-mail alebo heslo.")
 
 				return
 			}
@@ -95,7 +96,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	auth.SetSessionCookie(w, r, sessionToken)
 	auth.SetCsrfCookie(w, r, csrfToken)
-	auth.Redirect(w, r, "/admin/dashboard")
+	htmx.Redirect(w, r, "/admin/dashboard")
 }
 
 // Logout deletes the current session and redirects to the login page.
@@ -105,5 +106,5 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	auth.ClearSessionCookie(w)
 	auth.ClearCsrfCookie(w)
-	auth.Redirect(w, r, "/admin")
+	htmx.Redirect(w, r, "/admin")
 }

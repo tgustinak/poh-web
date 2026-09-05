@@ -1,4 +1,8 @@
-package auth
+// Package htmx provides response helpers for htmx-driven interactions:
+// HX-Redirect navigation, HX-Trigger toast notifications and request
+// detection. They are UI transport concerns shared by any handler,
+// not authentication logic.
+package htmx
 
 import (
 	"encoding/json"

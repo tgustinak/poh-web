@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/htmx"
 )
 
 // CsrfHeaderName carries the CSRF token on htmx requests
@@ -33,7 +34,7 @@ func (s *Service) RequireAuth(next http.Handler) http.Handler {
 			ClearSessionCookie(w)
 			ClearCsrfCookie(w)
 
-			if IsHtmxRequest(r) {
+			if htmx.IsHtmxRequest(r) {
 				w.Header().Set("HX-Redirect", "/admin")
 				w.WriteHeader(http.StatusOK)
 
@@ -72,8 +73,8 @@ func RequireCsrf(next http.Handler) http.Handler {
 		if !ValidCsrf(r, expected) {
 			slog.Warn("csrf check failed", "method", r.Method, "path", r.URL.Path)
 
-			if IsHtmxRequest(r) {
-				Toast(w, CsrfFailureMessage)
+			if htmx.IsHtmxRequest(r) {
+				htmx.Toast(w, CsrfFailureMessage)
 
 				return
 			}
