@@ -513,6 +513,16 @@ func TestCookieConsentBanner(t *testing.T) {
 				t.Fatalf("expected %s to contain %q", name, want)
 			}
 		}
+
+		// Shared footer: exactly one <footer> element and no unrendered
+		// templ expressions leaking into the HTML.
+		if count := strings.Count(body, "<footer"); count != 1 {
+			t.Fatalf("expected %s to have exactly one footer, got %d", name, count)
+		}
+
+		if strings.Contains(body, "@ConsentResetLink") {
+			t.Fatalf("expected %s footer to render the cookies link", name)
+		}
 	}
 }
 
