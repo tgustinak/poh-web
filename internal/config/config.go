@@ -14,11 +14,12 @@ import (
 
 // Config holds runtime configuration loaded from the environment.
 type Config struct {
-	Port          string
-	DatabasePath  string
-	AdminEmail    string
-	AdminPassword string
-	LogLevel      string
+	Port                        string
+	DatabasePath                string
+	AdminEmail                  string
+	AdminPassword               string
+	LogLevel                    string
+	ForceShutdownAfterInSeconds string
 }
 
 // Load reads .env (if present) and returns Config with defaults.
@@ -26,11 +27,12 @@ func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		Port:          getenv("PORT", ":8080"),
-		DatabasePath:  getenv("DATABASE_PATH", "./data/app.db"),
-		AdminEmail:    os.Getenv("ADMIN_EMAIL"),
-		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
-		LogLevel:      getenv("LOG_LEVEL", "info"),
+		Port:                        getenv("PORT", ":8080"),
+		DatabasePath:                getenv("DATABASE_PATH", "./data/app.db"),
+		AdminEmail:                  os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:               os.Getenv("ADMIN_PASSWORD"),
+		LogLevel:                    getenv("LOG_LEVEL", "info"),
+		ForceShutdownAfterInSeconds: getenv("FORCE_SHUTDOWN_AFTER_IN_SECONDS", "10"),
 	}
 }
 
@@ -47,6 +49,11 @@ func (c Config) Validate() error {
 		if err != nil || n < 1 || n > 65535 {
 			return fmt.Errorf("invalid PORT %q: expected like :8080", c.Port)
 		}
+	}
+
+	_, err := strconv.Atoi(c.ForceShutdownAfterInSeconds)
+	if err != nil {
+		return fmt.Errorf("invalid FORCE_SHUTDOWN_AFTER_IN_SECONDS %q: expected like 10", c.ForceShutdownAfterInSeconds)
 	}
 
 	if c.DatabasePath == "" {

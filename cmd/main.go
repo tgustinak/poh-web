@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/tgustinak/pohkapela.sk/internal/admin"
 	"github.com/tgustinak/pohkapela.sk/internal/app"
@@ -15,8 +17,6 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
 	"github.com/tgustinak/pohkapela.sk/internal/server"
 )
-
-const FORCE_SHUTDOWN_AFTER_IN_SECONDS = 10
 
 func main() {
 	cfg := config.Load()
@@ -51,9 +51,14 @@ func main() {
 
 	seedAdmin(ctx, authSvc, cfg)
 
+	shutdownTimeout, err := strconv.Atoi(cfg.ForceShutdownAfterInSeconds)
+	if err != nil {
+		slog.Error("unable to convert force shutdown to number", "error", err)
+	}
+
 	srv := server.NewServer(server.NewServerOptions{
 		Port:                    cfg.Port,
-		GracefulShutdownTimeout: FORCE_SHUTDOWN_AFTER_IN_SECONDS,
+		GracefulShutdownTimeout: time.Duration(shutdownTimeout),
 	})
 
 	srv.Mount("/", app.NewMux(app.Deps{

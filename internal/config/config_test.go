@@ -5,7 +5,7 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	valid := Config{Port: ":8080", DatabasePath: "./data/app.db", LogLevel: "info"}
+	valid := Config{Port: ":8080", DatabasePath: "./data/app.db", LogLevel: "info", ForceShutdownAfterInSeconds: "10"}
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("expected valid config, got %v", err)
 	}
@@ -17,6 +17,7 @@ func TestValidate(t *testing.T) {
 		"port too big":  func(c *Config) { c.Port = ":99999" },
 		"empty db path": func(c *Config) { c.DatabasePath = "" },
 		"bad log level": func(c *Config) { c.LogLevel = "verbose" },
+		"bad shutdown":  func(c *Config) { c.ForceShutdownAfterInSeconds = "soon" },
 	} {
 		cfg := valid
 		mutate(&cfg)
