@@ -1,0 +1,131 @@
+package templates
+
+// ConsentBanner renders the GDPR cookie consent banner for public pages.
+// The choice is stored in localStorage (no request to the server):
+//
+//	poh-cookie-consent = {"media":true|false,"ts":123}
+//
+// "media" gates third-party embeds (Spotify player). YouTube already runs
+// in privacy-enhanced (nocookie) mode. Admin login cookies are strictly
+// necessary and always on. A "poh:consent" event is dispatched on change.
+templ ConsentBanner() {
+	<div id="cookie-consent" class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-w-md z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur p-5 sm:p-6 shadow-2xl">
+		<p class="text-sm font-bold text-white">Súbory cookies</p>
+		<p class="mt-2 text-sm leading-relaxed text-white/60">
+			Používame nevyhnutné cookies (napr. prihlásenie do administrácie). Prehrávač Spotify a videá z YouTube (v režime zvýšenej ochrany súkromia) sa načítajú až po tvojom súhlase.
+		</p>
+		<div class="mt-4 flex flex-col sm:flex-row gap-2">
+			<button type="button" onclick="pohConsentAccept()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-amber-300 cursor-pointer"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>Prijať všetky</button>
+			<button type="button" onclick="pohConsentReject()" class="flex-1 rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white/70 transition hover:border-amber-400 hover:text-amber-400 cursor-pointer">Len nevyhnutné</button>
+		</div>
+	</div>
+	<script>
+		(function() {
+			var KEY = 'poh-cookie-consent';
+			function read() {
+				try {
+					return JSON.parse(localStorage.getItem(KEY));
+				} catch (e) {
+					return null;
+				}
+			}
+			function store(consent) {
+				try {
+					localStorage.setItem(KEY, JSON.stringify(consent));
+				} catch (e) {}
+			}
+			function banner() {
+				return document.getElementById('cookie-consent');
+			}
+			function showBanner() {
+				var b = banner();
+				if (!b) {
+					return;
+				}
+				clearTimeout(window.__cookieHideTimer);
+				b.classList.remove('hidden', 'cookie-banner-leave');
+				void b.offsetWidth;
+				b.classList.add('cookie-banner-enter');
+			}
+			function hideBanner() {
+				var b = banner();
+				if (!b) {
+					return;
+				}
+				b.classList.remove('cookie-banner-enter');
+				b.classList.add('cookie-banner-leave');
+				clearTimeout(window.__cookieHideTimer);
+				window.__cookieHideTimer = setTimeout(function() {
+					b.classList.add('hidden');
+					b.classList.remove('cookie-banner-leave');
+				}, 260);
+			}
+			function loadOne(el) {
+				if (!el || el.dataset.loaded || !el.dataset.mediaSrc) {
+					return;
+				}
+				var f = document.createElement('iframe');
+				f.className = 'w-full block';
+				f.style.borderRadius = '0';
+				f.width = '100%';
+				f.height = el.dataset.mediaHeight || '352';
+				f.setAttribute('allowfullscreen', '');
+				f.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+				f.setAttribute('loading', 'lazy');
+				f.title = el.dataset.mediaTitle || 'Vložený prehrávač';
+				f.src = el.dataset.mediaSrc;
+				var ph = el.querySelector('[data-media-placeholder]');
+				if (ph) {
+					ph.remove();
+				}
+				el.appendChild(f);
+				el.dataset.loaded = '1';
+			}
+			function loadAll() {
+				document.querySelectorAll('[data-media-embed]').forEach(loadOne);
+			}
+			function apply(consent) {
+				if (consent && consent.media) {
+					loadAll();
+				}
+				document.dispatchEvent(new CustomEvent('poh:consent', { detail: consent }));
+			}
+			window.pohLoadMediaOne = function(btn) {
+				var el = btn ? btn.closest('[data-media-embed]') : null;
+				loadOne(el);
+			};
+			window.pohConsentAccept = function() {
+				var c = { media: true, ts: Date.now() };
+				store(c);
+				hideBanner();
+				apply(c);
+			};
+			window.pohConsentReject = function() {
+				var c = { media: false, ts: Date.now() };
+				store(c);
+				hideBanner();
+				apply(c);
+			};
+			window.pohConsentReset = function() {
+				try {
+					localStorage.removeItem(KEY);
+				} catch (e) {}
+				showBanner();
+			};
+			window.pohGetConsent = function() {
+				return read();
+			};
+			var current = read();
+			if (!current) {
+				showBanner();
+			} else {
+				apply(current);
+			}
+		})();
+	</script>
+}
+
+// ConsentResetLink re-opens the consent banner (footer usage).
+templ ConsentResetLink() {
+	<button type="button" onclick="pohConsentReset()" class="text-sm text-white/40 transition hover:text-amber-400 cursor-pointer">Cookies</button>
+}

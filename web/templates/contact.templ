@@ -1,7 +1,5 @@
 package templates
 
-import "time"
-
 templ Contact() {
 	<section id="kontakt" class="bg-neutral-950 border-t border-white/5">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -62,7 +60,7 @@ templ Contact() {
 					<span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
 				</a>
 			</div>
-			<p class="mt-8 text-center text-sm text-white/40">Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H</p>
 		</div>
 	</section>
+	@Footer()
 }

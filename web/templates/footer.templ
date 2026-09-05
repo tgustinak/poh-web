@@ -1,0 +1,17 @@
+package templates
+
+import "time"
+
+// Footer renders the shared site footer: copyright, a cookies settings
+// link and optional extra content (e.g. back links) on the right.
+templ Footer() {
+	<footer class="border-t border-white/10 bg-black">
+		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+			<p class="text-sm text-white/40">
+				<span>Všetky práva vyhradené { time.Now().Year() } – kapela P.O.H · </span>
+				@ConsentResetLink()
+			</p>
+			{ children... }
+		</div>
+	</footer>
+}

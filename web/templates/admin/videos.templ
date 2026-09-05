@@ -1,7 +1,7 @@
 package templates
 
-templ AdminVideos() {
-	@AdminLayout("Klipy", "klipy") {
+templ AdminVideos(csrf string) {
+	@AdminLayout("Klipy", "klipy", csrf) {
 		@AdminPageHeader("Klipy – videoklipy", "Poradie v playliste, od najnovšieho")
 		<div class="admin-card">
 			<div class="overflow-x-auto">

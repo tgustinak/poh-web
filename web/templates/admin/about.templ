@@ -1,7 +1,7 @@
 package templates
 
-templ AdminAbout() {
-	@AdminLayout("O nás", "o-nas") {
+templ AdminAbout(csrf string) {
+	@AdminLayout("O nás", "o-nas", csrf) {
 		@AdminPageHeader("O nás", "Text sekcie O nás na webe")
 		<div class="admin-card">
 			<form data-demo class="flex flex-col gap-4">

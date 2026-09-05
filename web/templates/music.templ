@@ -37,17 +37,16 @@ templ Music() {
 							<p class="text-xs text-white/50">P.O.H na Spotify</p>
 						</div>
 					</div>
-					<iframe
-						data-testid="embed-iframe"
-						class="w-full block"
-						style="border-radius:0"
-						src="https://open.spotify.com/embed/artist/79t3KrQngTRDooegKsR4cw?utm_source=generator&theme=0&si=e0f93c63516a49fb"
-						width="100%"
-						height="352"
-						allowfullscreen=""
-						allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-						loading="lazy"
-					></iframe>
+				<div data-media-embed data-media-src="https://open.spotify.com/embed/artist/79t3KrQngTRDooegKsR4cw?utm_source=generator&theme=0&si=e0f93c63516a49fb" data-media-height="352" data-media-title="P.O.H na Spotify" class="w-full">
+					<div data-media-placeholder class="px-6 py-10 text-center">
+						<span class="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-[#1DB954]/15 text-[#1DB954]">
+							<svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm4.6 14.4a.75.75 0 01-1 .25c-2.8-1.7-6.3-2.1-10.4-1.1a.75.75 0 11-.3-1.5c4.5-1 8.3-.6 11.4 1.3.4.2.5.7.3 1zM18 13a.75.75 0 01-1 .25c-2.4-1.4-6-1.9-8.8-1a.75.75 0 11-.6-1.4c3.2-1 7.1-.5 9.9 1.2.4.2.5.7.3 1zm.75-3.1a.75.75 0 01-1 .26c-2.7-1.7-7.2-2.2-10.7-1.2a.75.75 0 11-.4-1.45c4-1.15 8.9-.6 12 1.35.4.25.5.75.3 1.04z"></path></svg>
+						</span>
+						<p class="mt-4 text-sm font-bold uppercase tracking-wider text-white">Spotify prehrávač</p>
+						<p class="mt-2 text-sm leading-relaxed text-white/50">Načítaním prehrávača dôjde k spojeniu so službou Spotify a môžu sa ukladať cookies tretích strán.</p>
+						<button type="button" onclick="pohLoadMediaOne(this)" class="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1DB954] px-5 py-2.5 text-sm font-bold text-black transition hover:bg-[#1ed760] cursor-pointer">Načítať prehrávač</button>
+					</div>
+				</div>
 					<div class="px-6 py-5 flex flex-wrap items-center gap-3 border-t border-white/10 bg-white/[0.02]">
 						<a
 							href="https://open.spotify.com/artist/79t3KrQngTRDooegKsR4cw"

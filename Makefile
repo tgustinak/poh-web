@@ -1,4 +1,4 @@
-.PHONY: build dev test
+.PHONY: build dev test validate sqlc templ seed
 
 build:
 	go tool templ generate
@@ -16,3 +16,20 @@ dev:
 
 test:
 	go test ./...
+
+# Validate everything: templates compile, formatting is clean,
+# vet passes and the full test suite (unit + integration) is green.
+validate:
+	go tool templ generate
+	test -z "$$(gofmt -l cmd db internal web)" || (echo "Unformatted Go files:" && gofmt -l cmd db internal web && exit 1)
+	go vet ./...
+	go test ./...
+
+templ:
+	go tool templ generate
+
+sqlc:
+	go tool sqlc generate -f db/sqlc.yaml
+
+seed:
+	go run ./cmd/seed
