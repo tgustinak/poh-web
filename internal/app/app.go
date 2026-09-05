@@ -19,8 +19,9 @@ import (
 
 // Deps are the dependencies needed to build the application handler.
 type Deps struct {
-	Auth         *auth.Service
-	AdminHandler *admin.Handler
+	Auth        *auth.Service
+	AuthHandler *admin.AuthHandler
+	LogsHandler *admin.LogsHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -48,9 +49,9 @@ func NewMux(deps Deps) http.Handler {
 		renderTemplate(templates.Organizers(), w)
 	})
 
-	mux.HandleFunc("GET /admin", deps.AdminHandler.LoginPage)
-	mux.HandleFunc("POST /admin/login", deps.AdminHandler.Login)
-	mux.HandleFunc("POST /admin/logout", protected(deps.Auth, deps.AdminHandler.Logout))
+	mux.HandleFunc("GET /admin", deps.AuthHandler.LoginPage)
+	mux.HandleFunc("POST /admin/login", deps.AuthHandler.Login)
+	mux.HandleFunc("POST /admin/logout", protected(deps.Auth, deps.AuthHandler.Logout))
 
 	mux.HandleFunc("GET /admin/dashboard", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -109,13 +110,13 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/logy", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		deps.AdminHandler.LogsPage(w, r)
+		deps.LogsHandler.LogsPage(w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/logy/entries", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		deps.AdminHandler.LogsEntries(w, r)
+		deps.LogsHandler.LogsEntries(w, r)
 	}))
 
 	return server.Logger(mux)

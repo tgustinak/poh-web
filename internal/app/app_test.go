@@ -59,8 +59,9 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 	logs := logbuffer.New(10)
 
 	mux := app.NewMux(app.Deps{
-		Auth:         authSvc,
-		AdminHandler: admin.NewHandler(authSvc, logs),
+		Auth:        authSvc,
+		AuthHandler: admin.NewAuthHandler(authSvc),
+		LogsHandler: admin.NewLogsHandler(logs),
 	})
 
 	server := httptest.NewServer(mux)

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,84 +9,16 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/pressly/goose/v3"
-	_ "modernc.org/sqlite"
-
-	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
 )
 
-func newTestHandler(t *testing.T) (*Handler, *auth.Service) {
-	t.Helper()
-
-	conn, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("open test database: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = conn.Close()
-	})
-
-	goose.SetBaseFS(dbmigrations.FS)
-
-	if err := goose.SetDialect("sqlite"); err != nil {
-		t.Fatalf("set goose dialect: %v", err)
-	}
-
-	if err := goose.Up(conn, "."); err != nil {
-		t.Fatalf("apply migrations: %v", err)
-	}
-
-	authSvc := auth.NewService(db.New(conn))
-
-	if _, err := authSvc.EnsureAdminUser(t.Context(), "admin@example.com", "secret123"); err != nil {
-		t.Fatalf("seed admin user: %v", err)
-	}
-
-	return NewHandler(authSvc, logbuffer.New(10)), authSvc
-}
-
-// testAnonCsrf is the anonymous CSRF token used by loginRequest.
-const testAnonCsrf = "test-anon-csrf-token"
-
-func loginRequest(t *testing.T, email, password string) *http.Request {
-	t.Helper()
-
-	form := url.Values{"email": {email}, "password": {password}, "csrf_token": {testAnonCsrf}}
-
-	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.AddCookie(&http.Cookie{Name: auth.CsrfCookieName, Value: testAnonCsrf})
-
-	return req
-}
-
-// htmxRequest marks a request as coming from htmx.
-func htmxRequest(req *http.Request) *http.Request {
-	req.Header.Set("HX-Request", "true")
-
-	return req
-}
-
-func sessionCookie(rec *httptest.ResponseRecorder) *http.Cookie {
-	for _, cookie := range rec.Result().Cookies() {
-		if cookie.Name == auth.CookieName {
-			return cookie
-		}
-	}
-
-	return nil
-}
-
 func TestLoginPageRendersForm(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
 	rec := httptest.NewRecorder()
 
-	handler.LoginPage(rec, req)
+	authHandler.LoginPage(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -100,7 +31,7 @@ func TestLoginPageRendersForm(t *testing.T) {
 }
 
 func TestLoginPageRedirectsWhenAuthenticated(t *testing.T) {
-	handler, authSvc := newTestHandler(t)
+	authHandler, _, authSvc := newTestHandlers(t)
 
 	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
@@ -111,7 +42,7 @@ func TestLoginPageRedirectsWhenAuthenticated(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
 	rec := httptest.NewRecorder()
 
-	handler.LoginPage(rec, req)
+	authHandler.LoginPage(rec, req)
 
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", rec.Code)
@@ -123,10 +54,10 @@ func TestLoginPageRedirectsWhenAuthenticated(t *testing.T) {
 }
 
 func TestLoginSuccessSetsCookie(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, loginRequest(t, "admin@example.com", "secret123"))
+	authHandler.Login(rec, loginRequest(t, "admin@example.com", "secret123"))
 
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", rec.Code)
@@ -143,10 +74,10 @@ func TestLoginSuccessSetsCookie(t *testing.T) {
 }
 
 func TestLoginFailureRendersError(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, loginRequest(t, "admin@example.com", "wrong"))
+	authHandler.Login(rec, loginRequest(t, "admin@example.com", "wrong"))
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
@@ -162,7 +93,7 @@ func TestLoginFailureRendersError(t *testing.T) {
 }
 
 func TestLogoutClearsSession(t *testing.T) {
-	handler, authSvc := newTestHandler(t)
+	authHandler, _, authSvc := newTestHandlers(t)
 
 	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
@@ -173,7 +104,7 @@ func TestLogoutClearsSession(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
 	rec := httptest.NewRecorder()
 
-	handler.Logout(rec, req)
+	authHandler.Logout(rec, req)
 
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("expected 303, got %d", rec.Code)
@@ -185,7 +116,7 @@ func TestLogoutClearsSession(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware(t *testing.T) {
-	_, authSvc := newTestHandler(t)
+	_, _, authSvc := newTestHandlers(t)
 
 	next := authSvc.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := auth.UserFromRequest(r)
@@ -226,10 +157,10 @@ func TestRequireAuthMiddleware(t *testing.T) {
 }
 
 func TestLoginHtmxSuccessRedirects(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, htmxRequest(loginRequest(t, "admin@example.com", "secret123")))
+	authHandler.Login(rec, htmxRequest(loginRequest(t, "admin@example.com", "secret123")))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -245,10 +176,10 @@ func TestLoginHtmxSuccessRedirects(t *testing.T) {
 }
 
 func TestLoginHtmxFailureTriggersToast(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, htmxRequest(loginRequest(t, "admin@example.com", "wrong")))
+	authHandler.Login(rec, htmxRequest(loginRequest(t, "admin@example.com", "wrong")))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -286,7 +217,7 @@ func TestLoginHtmxFailureTriggersToast(t *testing.T) {
 }
 
 func TestLogoutHtmxRedirects(t *testing.T) {
-	handler, authSvc := newTestHandler(t)
+	authHandler, _, authSvc := newTestHandlers(t)
 
 	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {
@@ -297,7 +228,7 @@ func TestLogoutHtmxRedirects(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: token})
 	rec := httptest.NewRecorder()
 
-	handler.Logout(rec, htmxRequest(req))
+	authHandler.Logout(rec, htmxRequest(req))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -313,7 +244,7 @@ func TestLogoutHtmxRedirects(t *testing.T) {
 }
 
 func TestLoginCsrfMismatchRejected(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 
 	form := url.Values{"email": {"admin@example.com"}, "password": {"secret123"}, "csrf_token": {"wrong"}}
 	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(form.Encode()))
@@ -321,7 +252,7 @@ func TestLoginCsrfMismatchRejected(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: auth.CsrfCookieName, Value: testAnonCsrf})
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, req)
+	authHandler.Login(rec, req)
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", rec.Code)
@@ -333,13 +264,13 @@ func TestLoginCsrfMismatchRejected(t *testing.T) {
 }
 
 func TestLoginHtmxCsrfMismatchTriggersToast(t *testing.T) {
-	handler, _ := newTestHandler(t)
+	authHandler, _, _ := newTestHandlers(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(url.Values{}.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 
-	handler.Login(rec, htmxRequest(req))
+	authHandler.Login(rec, htmxRequest(req))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -356,7 +287,7 @@ func TestLoginHtmxCsrfMismatchTriggersToast(t *testing.T) {
 }
 
 func TestRequireCsrfMiddleware(t *testing.T) {
-	_, authSvc := newTestHandler(t)
+	_, _, authSvc := newTestHandlers(t)
 
 	token, _, err := authSvc.Login(t.Context(), "admin@example.com", "secret123")
 	if err != nil {

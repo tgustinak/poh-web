@@ -62,8 +62,9 @@ func main() {
 	})
 
 	srv.Mount("/", app.NewMux(app.Deps{
-		Auth:         authSvc,
-		AdminHandler: admin.NewHandler(authSvc, logs),
+		Auth:        authSvc,
+		AuthHandler: admin.NewAuthHandler(authSvc),
+		LogsHandler: admin.NewLogsHandler(logs),
 	}))
 
 	srv.Start()

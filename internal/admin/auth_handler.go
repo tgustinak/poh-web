@@ -5,27 +5,24 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
-// Handler serves admin login, logout and session-aware redirects.
-type Handler struct {
+// AuthHandler serves admin login, logout and session-aware redirects.
+type AuthHandler struct {
 	auth *auth.Service
-	logs *logbuffer.Buffer
 }
 
-// NewHandler creates an admin handler.
-func NewHandler(authSvc *auth.Service, logs *logbuffer.Buffer) *Handler {
-	return &Handler{auth: authSvc, logs: logs}
+// NewAuthHandler creates an admin auth handler.
+func NewAuthHandler(authSvc *auth.Service) *AuthHandler {
+	return &AuthHandler{auth: authSvc}
 }
 
 // LoginPage renders the login form, redirecting already logged-in admins
 // to the dashboard.
-func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if _, _, err := h.auth.Authenticate(r.Context(), auth.SessionToken(r)); err == nil {
 		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
 
@@ -48,7 +45,7 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 // cookie and redirects to the dashboard. htmx requests get HX-Redirect
 // on success and a showToast trigger on failure; plain form posts get
 // full-page responses.
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		if auth.IsHtmxRequest(r) {
 			auth.Toast(w, "Nepodarilo sa spracovať formulár, skús to znova.")
@@ -103,52 +100,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 // Logout deletes the current session and redirects to the login page.
 // The route is wrapped in RequireAuth + RequireCsrf (see app mux).
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	_ = h.auth.Logout(r.Context(), auth.SessionToken(r))
 
 	auth.ClearSessionCookie(w)
 	auth.ClearCsrfCookie(w)
 	auth.Redirect(w, r, "/admin")
-}
-
-// LogsPage renders the log viewer with the newest entries.
-func (h *Handler) LogsPage(w http.ResponseWriter, r *http.Request) {
-	csrf, _ := auth.CsrfFromRequest(r)
-
-	entries, next := h.logs.Recent(logbuffer.DefaultPageSize)
-
-	admintemplates.AdminLogs(entries, next, csrf).Render(r.Context(), w)
-}
-
-// LogsEntries renders log rows for htmx infinite scroll (older pages)
-// and for the refresh button (newest page). Query params:
-// before=<seq> loads entries older than seq, limit caps page size.
-func (h *Handler) LogsEntries(w http.ResponseWriter, r *http.Request) {
-	before, limit := logPageParams(r)
-
-	var entries []logbuffer.Entry
-	var next uint64
-	if before == 0 {
-		entries, next = h.logs.Recent(limit)
-	} else {
-		entries, next = h.logs.Before(before, limit)
-	}
-
-	admintemplates.LogRows(entries, next, before != 0).Render(r.Context(), w)
-}
-
-func logPageParams(r *http.Request) (uint64, int) {
-	limit := logbuffer.DefaultPageSize
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			limit = n
-		}
-	}
-
-	var before uint64
-	if v := r.URL.Query().Get("before"); v != "" {
-		before, _ = strconv.ParseUint(v, 10, 64)
-	}
-
-	return before, limit
 }
