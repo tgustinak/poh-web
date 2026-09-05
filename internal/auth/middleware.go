@@ -52,6 +52,10 @@ func (s *Service) RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// CsrfFailureMessage is shown when a request carries a missing
+// or invalid CSRF token.
+const CsrfFailureMessage = "Neplatný bezpečnostný token. Obnov stránku a skús znova."
+
 // RequireCsrf rejects unsafe methods (POST, PUT, PATCH, DELETE) without
 // a valid CSRF token. The expected token comes from the session
 // (stored in the context by RequireAuth, which must run first).
@@ -69,12 +73,12 @@ func RequireCsrf(next http.Handler) http.Handler {
 			slog.Warn("csrf check failed", "method", r.Method, "path", r.URL.Path)
 
 			if IsHtmxRequest(r) {
-				Toast(w, "Neplatný bezpečnostný token. Obnov stránku a skús znova.")
+				Toast(w, CsrfFailureMessage)
 
 				return
 			}
 
-			http.Error(w, "Neplatný bezpečnostný token.", http.StatusForbidden)
+			http.Error(w, CsrfFailureMessage, http.StatusForbidden)
 
 			return
 		}

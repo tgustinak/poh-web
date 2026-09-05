@@ -350,7 +350,7 @@ func TestLoginHtmxCsrfMismatchTriggersToast(t *testing.T) {
 		t.Fatalf("decode HX-Trigger: %v", err)
 	}
 
-	if payload["showToast"] != csrfFailure {
+	if payload["showToast"] != auth.CsrfFailureMessage {
 		t.Fatalf("expected CSRF toast, got %q", payload["showToast"])
 	}
 }

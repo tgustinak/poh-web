@@ -12,9 +12,6 @@ import (
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
-// csrfFailure is shown when a request carries a missing or invalid CSRF token.
-const csrfFailure = "Neplatný bezpečnostný token. Obnov stránku a skús znova."
-
 // Handler serves admin login, logout and session-aware redirects.
 type Handler struct {
 	auth *auth.Service
@@ -67,12 +64,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if !auth.ValidCsrf(r, auth.CsrfCookieValue(r)) {
 		if auth.IsHtmxRequest(r) {
-			auth.Toast(w, csrfFailure)
+			auth.Toast(w, auth.CsrfFailureMessage)
 
 			return
 		}
 
-		http.Error(w, csrfFailure, http.StatusForbidden)
+		http.Error(w, auth.CsrfFailureMessage, http.StatusForbidden)
 
 		return
 	}
