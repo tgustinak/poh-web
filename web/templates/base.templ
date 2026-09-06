@@ -1,5 +1,10 @@
 package templates
 
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/pohkapela.sk/internal/static"
+)
+
 templ Base(title string) {
 	<!DOCTYPE html>
 	<html lang="en">
@@ -7,10 +12,11 @@ templ Base(title string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title }</title>
-			<link rel="stylesheet" href="/static/css/output.css"/>
+			<link rel="stylesheet" href={ static.URL("css/output.css") }/>
 		</head>
 		<body class="min-h-screen bg-slate-900 text-white">
 			{ children... }
+			@scripts.Flush()
 		</body>
 	</html>
 }

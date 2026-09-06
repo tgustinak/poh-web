@@ -1,6 +1,9 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/internal/concerts"
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/concerts"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+)
 
 templ Concerts(upcoming []concerts.Concert, past []concerts.PastYear, pastCount int) {
 	<section id="koncerty" class="relative overflow-hidden bg-black border-t border-white/5">
@@ -42,23 +45,26 @@ templ Concerts(upcoming []concerts.Concert, past []concerts.PastYear, pastCount 
 			}
 			if pastCount > 0 {
 				<div class="mt-8 max-w-2xl">
-					<details class="rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
-						<summary class="cursor-pointer px-5 sm:px-6 py-4 text-sm font-semibold text-white/70 transition hover:text-white">
+					<details class="group past-accordion rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
+						<summary class="flex cursor-pointer list-none items-center gap-3 px-5 sm:px-6 py-4 text-sm font-semibold text-white/70 transition hover:text-white [&::-webkit-details-marker]:hidden">
+							<svg class="w-4 h-4 shrink-0 text-amber-400 transition-transform duration-300 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
 							Odohrané koncerty ({ pastCount })
 						</summary>
-						<div class="klip-list max-h-[380px] overflow-y-auto border-t border-white/10 px-5 sm:px-6 py-2">
-							for _, group := range past {
-								<p class="sticky top-0 bg-black/90 py-2 text-sm font-bold text-amber-400">{ group.Year }</p>
-								<ul class="pb-3">
-									for _, c := range group.Concerts {
-										<li class="py-1.5 text-sm text-white/70">
-											<span class="font-mono text-xs text-white/40">{ concerts.ShortDate(c.Date) }</span>
-											<span class="mx-2 text-white/25">—</span>
-											<span class="font-medium text-white/85">{ c.Name }</span>
-										</li>
-									}
-								</ul>
-							}
+						<div class="past-body">
+							<div class="klip-list max-h-[380px] overflow-y-auto border-t border-white/10 px-5 sm:px-6 pb-2">
+								for _, group := range past {
+									<p class="sticky top-0 -mx-5 sm:-mx-6 bg-black/90 px-5 sm:px-6 py-2 text-sm font-bold text-amber-400 backdrop-blur-sm">{ group.Year }</p>
+									<ul class="pb-3">
+										for _, c := range group.Concerts {
+											<li class="py-1.5 text-sm text-white/70">
+												<span class="font-mono text-xs text-white/40">{ concerts.ShortDate(c.Date) }</span>
+												<span class="mx-2 text-white/25">—</span>
+												<span class="font-medium text-white/85">{ c.Name }</span>
+											</li>
+										}
+									</ul>
+								}
+							</div>
 						</div>
 					</details>
 				</div>
@@ -71,6 +77,47 @@ templ Concerts(upcoming []concerts.Concert, past []concerts.PastYear, pastCount 
 			</div>
 		</div>
 	</section>
+	@scripts.Defer("concerts", ConcertsScripts())
+}
+
+templ ConcertsScripts() {
+	<script>
+		document.querySelectorAll('details.past-accordion').forEach((d) => {
+			const summary = d.querySelector('summary');
+			const body = d.querySelector('.past-body');
+			if (!summary || !body) {
+				return;
+			}
+			let anim = null;
+			const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const targetHeight = () => Math.min(body.scrollHeight, 420);
+			summary.addEventListener('click', (e) => {
+				e.preventDefault();
+				if (reducedMotion) {
+					d.open = !d.open;
+					return;
+				}
+				if (anim) {
+					anim.cancel();
+				}
+				if (!d.open) {
+					d.open = true;
+					const h = targetHeight();
+					anim = body.animate([{ maxHeight: '0px' }, { maxHeight: h + 'px' }], { duration: 350, easing: 'ease' });
+					anim.onfinish = () => {
+						anim = null;
+					};
+				} else {
+					const h = body.offsetHeight;
+					anim = body.animate([{ maxHeight: h + 'px' }, { maxHeight: '0px' }], { duration: 300, easing: 'ease' });
+					anim.onfinish = () => {
+						d.open = false;
+						anim = null;
+					};
+				}
+			});
+		});
+	</script>
 }
 
 templ ConcertFeatured(c concerts.Concert) {

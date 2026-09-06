@@ -1,5 +1,7 @@
 package templates
 
+import "github.com/tgustinak/pohkapela.sk/internal/scripts"
+
 templ Merch() {
 	<section id="merch" class="bg-neutral-950 border-t border-white/5">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -78,6 +80,10 @@ templ Merch() {
 			</div>
 		</div>
 	</section>
+	@scripts.Defer("merch", MerchScripts())
+}
+
+templ MerchScripts() {
 	<script>
 		function merchShow(which) {
 			const front = which === 'front';

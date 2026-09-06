@@ -1,6 +1,9 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/web/templates"
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/pohkapela.sk/web/templates"
+)
 
 templ AdminLayout(title string, active string, csrf string) {
 	@templates.Base("Admin – " + title) {
@@ -64,7 +67,12 @@ templ AdminLayout(title string, active string, csrf string) {
 			</div>
 		</div>
 		@AdminScripts(csrf)
-		<script>
+		@scripts.Defer("admin-demo", AdminDemoScripts())
+	}
+}
+
+templ AdminDemoScripts() {
+	<script>
 			document.querySelectorAll('form[data-demo]').forEach(f => {
 				f.addEventListener('submit', (e) => {
 					e.preventDefault();
@@ -78,8 +86,7 @@ templ AdminLayout(title string, active string, csrf string) {
 					}
 				});
 			});
-		</script>
-	}
+	</script>
 }
 
 templ AdminNavItem(href string, label string, isActive bool, icon string) {

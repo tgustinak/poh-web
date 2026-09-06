@@ -4,7 +4,6 @@
 package app
 
 import (
-	"context"
 	"net/http"
 	"path/filepath"
 	"runtime"
@@ -14,6 +13,7 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
 	"github.com/tgustinak/pohkapela.sk/internal/server"
 	"github.com/tgustinak/pohkapela.sk/web/templates"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
@@ -64,13 +64,13 @@ func NewMux(deps Deps) http.Handler {
 			concerts.FromDBMany(upcoming),
 			concerts.GroupPastByYear(past),
 			len(past),
-		), w)
+		), w, r)
 	})
 
 	mux.HandleFunc("GET /pre-organizatorov", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(templates.Organizers(), w)
+		renderTemplate(templates.Organizers(), w, r)
 	})
 
 	mux.HandleFunc("GET /admin", deps.AuthHandler.LoginPage)
@@ -87,13 +87,13 @@ func NewMux(deps Deps) http.Handler {
 
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminDashboard(csrf(r), upcoming), w)
+		renderTemplate(admintemplates.AdminDashboard(csrf(r), upcoming), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/music", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminMusic(csrf(r)), w)
+		renderTemplate(admintemplates.AdminMusic(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/concerts", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
@@ -111,37 +111,37 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/merch", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminMerch(csrf(r)), w)
+		renderTemplate(admintemplates.AdminMerch(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/videos", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminVideos(csrf(r)), w)
+		renderTemplate(admintemplates.AdminVideos(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/about", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminAbout(csrf(r)), w)
+		renderTemplate(admintemplates.AdminAbout(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/social", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminSocial(csrf(r)), w)
+		renderTemplate(admintemplates.AdminSocial(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/contact", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminContact(csrf(r)), w)
+		renderTemplate(admintemplates.AdminContact(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/organizers", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminOrganizers(csrf(r)), w)
+		renderTemplate(admintemplates.AdminOrganizers(csrf(r)), w, r)
 	}))
 
 	mux.HandleFunc("GET /admin/logs", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +156,17 @@ func NewMux(deps Deps) http.Handler {
 		deps.LogsHandler.LogsEntries(w, r)
 	}))
 
-	return server.Logger(mux)
+	return server.Logger(withScriptCollector(mux))
+}
+
+// withScriptCollector scopes a scripts stack to the request, so page
+// partials can Defer inline scripts for Base to Flush before </body>.
+func withScriptCollector(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, _ := scripts.WithCollector(r.Context())
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // protected wraps a handler with authentication and CSRF protection.
@@ -181,6 +191,6 @@ func staticDir() string {
 	return filepath.Join(filepath.Dir(file), "..", "..", "web", "static")
 }
 
-func renderTemplate(t templ.Component, w http.ResponseWriter) {
-	t.Render(context.Background(), w)
+func renderTemplate(t templ.Component, w http.ResponseWriter, r *http.Request) {
+	t.Render(r.Context(), w)
 }

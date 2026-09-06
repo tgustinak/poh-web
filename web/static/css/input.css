@@ -198,6 +198,9 @@
     .toast-leave {
       animation: none;
     }
+    .past-body {
+      transition: none;
+    }
   }
 
   .merch-pill {
@@ -299,5 +302,15 @@
 
   .klip-list::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  .past-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+
+  details[open] .past-body {
+    max-height: 420px;
   }
 }

@@ -498,6 +498,36 @@ func entriesCursor(t *testing.T, body string) string {
 	return rest[:end]
 }
 
+func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+
+	// Deferred page scripts must render grouped right before </body>,
+	// not scattered between sections.
+	lastSection := strings.LastIndex(body, "</section>")
+	firstScript := strings.Index(body, "<script")
+	if firstScript < 0 {
+		t.Fatal("expected deferred scripts in home page")
+	}
+
+	if firstScript < lastSection {
+		t.Fatal("expected all scripts after the last section")
+	}
+
+	for _, want := range []string{"past-accordion", "klipPlay", "merchShow", "pohConsentAccept", "sectionObserver"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected flushed script %q in home page", want)
+		}
+	}
+}
+
 func TestCookieConsentBanner(t *testing.T) {
 	server, _ := testServer(t)
 	client := testClient(t)

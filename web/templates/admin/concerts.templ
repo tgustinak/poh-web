@@ -5,15 +5,13 @@ import (
 
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
 )
 
 templ AdminConcerts(upcoming []db.Concert, past []db.Concert, csrf string) {
 	@AdminLayout("Koncerty", "concerts", csrf) {
 		@AdminPageHeader("Koncerty", "Chronologicky, najskôr nadchádzajúce")
-		<div id="concert-tables">
-			@AdminConcertTables(upcoming, past)
-		</div>
-		<div class="admin-card mt-6">
+		<div class="admin-card">
 			<h2 class="text-xl font-bold text-white">Pridať koncert</h2>
 			<form id="concert-create-form" method="POST" action="/admin/concerts" hx-post="/admin/concerts" hx-target="#concert-tables" hx-swap="innerHTML" class="mt-5 grid gap-4 sm:grid-cols-3">
 				<input type="hidden" name="csrf_token" value={ csrf }/>
@@ -30,12 +28,19 @@ templ AdminConcerts(upcoming []db.Concert, past []db.Concert, csrf string) {
 				</div>
 			</form>
 		</div>
-		<script>
+		<div id="concert-tables" class="mt-6">
+			@AdminConcertTables(upcoming, past)
+		</div>
+		@scripts.Defer("concert-form", ConcertFormScripts())
+	}
+}
+
+templ ConcertFormScripts() {
+	<script>
 			document.body.addEventListener('concertFormReset', () => {
 				document.getElementById('concert-create-form')?.reset();
 			});
-		</script>
-	}
+	</script>
 }
 
 templ AdminConcertTables(upcoming []db.Concert, past []db.Concert) {
