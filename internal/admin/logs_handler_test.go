@@ -14,7 +14,7 @@ func TestLogsPageRendersEntries(t *testing.T) {
 
 	logsHandler.logs.Append(logbuffer.Entry{Level: "WARN", TimeLabel: "12:00:00", Message: "disk almost full", Attrs: "free=5%"})
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/logy", nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/logs", nil)
 	rec := httptest.NewRecorder()
 
 	logsHandler.LogsPage(rec, req)
@@ -41,7 +41,7 @@ func TestLogsEntriesPaginates(t *testing.T) {
 	getEntries := func(query string) string {
 		t.Helper()
 
-		req := httptest.NewRequest(http.MethodGet, "/admin/logy/entries"+query, nil)
+		req := httptest.NewRequest(http.MethodGet, "/admin/logs/entries"+query, nil)
 		rec := httptest.NewRecorder()
 
 		logsHandler.LogsEntries(rec, req)

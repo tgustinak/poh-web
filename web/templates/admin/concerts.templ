@@ -1,65 +1,129 @@
 package templates
 
-templ AdminConcerts(csrf string) {
-	@AdminLayout("Koncerty", "koncerty", csrf) {
-		@AdminPageHeader("Koncerty", "Nadchádzajúce termíny, prvý v zozname = najbližší")
-		<div class="admin-card">
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm">
-					<thead>
-						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
-							<th class="pb-3 pr-4 font-semibold">#</th>
-							<th class="pb-3 pr-4 font-semibold">Názov</th>
-							<th class="pb-3 pr-4 font-semibold">Deň</th>
-							<th class="pb-3 pr-4 font-semibold">Mesiac</th>
-							<th class="pb-3 font-semibold text-right">Akcie</th>
-						</tr>
-					</thead>
-					<tbody>
-						@AdminConcertRow("1", "Kubínsky Jarmok", "18", "Jan")
-						@AdminConcertRow("2", "Kubínsky Jarmok", "11", "Feb")
-						@AdminConcertRow("3", "Kubínsky Jarmok", "1", "Mar")
-						@AdminConcertRow("4", "Kubínsky Jarmok", "8", "Apr")
-						@AdminConcertRow("5", "Kubínsky Jarmok", "18", "Sep")
-						@AdminConcertRow("6", "Gustove Narodky", "26", "Oct")
-					</tbody>
-				</table>
-			</div>
+import (
+	"strconv"
+
+	"github.com/tgustinak/pohkapela.sk/internal/concerts"
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+)
+
+templ AdminConcerts(upcoming []db.Concert, past []db.Concert, csrf string) {
+	@AdminLayout("Koncerty", "concerts", csrf) {
+		@AdminPageHeader("Koncerty", "Chronologicky, najskôr nadchádzajúce")
+		<div id="concert-tables">
+			@AdminConcertTables(upcoming, past)
 		</div>
-		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
+		<div class="admin-card mt-6">
 			<h2 class="text-xl font-bold text-white">Pridať koncert</h2>
-			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-3">
-				<div class="sm:col-span-3">
+			<form id="concert-create-form" method="POST" action="/admin/concerts" hx-post="/admin/concerts" hx-target="#concert-tables" hx-swap="innerHTML" class="mt-5 grid gap-4 sm:grid-cols-3">
+				<input type="hidden" name="csrf_token" value={ csrf }/>
+				<div>
 					<label class="admin-label" for="concert-name">Názov</label>
-					<input id="concert-name" type="text" placeholder="Názov akcie / miesta" class="admin-input"/>
+					<input id="concert-name" name="name" type="text" required maxlength="200" placeholder="Názov akcie / miesta" class="admin-input"/>
 				</div>
 				<div>
-					<label class="admin-label" for="concert-day">Deň</label>
-					<input id="concert-day" type="number" min="1" max="31" placeholder="18" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="concert-month">Mesiac</label>
-					<input id="concert-month" type="text" placeholder="Sep" class="admin-input"/>
+					<label class="admin-label" for="concert-date">Dátum</label>
+					<input id="concert-date" name="event_date" type="date" required class="admin-input"/>
 				</div>
 				<div class="flex items-end">
 					<button type="submit" class="admin-btn">Pridať koncert</button>
 				</div>
 			</form>
 		</div>
+		<script>
+			document.body.addEventListener('concertFormReset', () => {
+				document.getElementById('concert-create-form')?.reset();
+			});
+		</script>
 	}
 }
 
-templ AdminConcertRow(order string, name string, day string, month string) {
+templ AdminConcertTables(upcoming []db.Concert, past []db.Concert) {
+	<div class="admin-card">
+		<h2 class="text-xl font-bold text-white">Nadchádzajúce</h2>
+		if len(upcoming) == 0 {
+			<p class="mt-3 text-sm text-white/50">Žiadne nadchádzajúce koncerty.</p>
+		} else {
+			<div class="mt-3 overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">Dátum</th>
+							<th class="pb-3 pr-4 font-semibold">Názov</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, c := range upcoming {
+							@AdminConcertRow(c)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+	<div class="admin-card mt-6">
+		<h2 class="text-xl font-bold text-white">Odohrané</h2>
+		if len(past) == 0 {
+			<p class="mt-3 text-sm text-white/50">Zatiaľ žiadne odohrané koncerty.</p>
+		} else {
+			<div class="mt-3 overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">Dátum</th>
+							<th class="pb-3 pr-4 font-semibold">Názov</th>
+							<th class="pb-3 font-semibold text-right">Akcie</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, c := range past {
+							@AdminConcertRow(c)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+}
+
+templ AdminConcertRow(c db.Concert) {
 	<tr class="border-t border-white/10">
-		<td class="py-3 pr-4 text-white/40">{ order }</td>
-		<td class="py-3 pr-4 font-semibold text-white">{ name }</td>
-		<td class="py-3 pr-4 text-white/70">{ day }</td>
-		<td class="py-3 pr-4 text-white/70">{ month }</td>
+		<td class="py-3 pr-4 whitespace-nowrap text-white/70">{ concerts.ShortDate(c.EventDate) }</td>
+		<td class="py-3 pr-4 font-semibold text-white">{ c.Name }</td>
 		<td class="py-3">
 			<div class="flex justify-end gap-2">
-				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">Upraviť</button>
-				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+				<button type="button" class="admin-btn-row cursor-pointer" hx-get={ concertURL(c.ID, "/edit") } hx-target="closest tr" hx-swap="outerHTML">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger cursor-pointer" hx-delete={ concertURL(c.ID, "") } hx-target="closest tr" hx-swap="delete" hx-confirm="Naozaj zmazať koncert?">Zmazať</button>
 			</div>
 		</td>
 	</tr>
+}
+
+templ AdminConcertEditRow(c db.Concert, errMsg string) {
+	<tr class="border-t border-amber-400/40 bg-amber-400/[0.04]">
+		<td colspan="3" class="px-4 py-4">
+			if errMsg != "" {
+				<p role="alert" class="mb-3 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			<form hx-put={ concertURL(c.ID, "") } hx-target="closest tr" hx-swap="outerHTML" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+				<div class="flex-1">
+					<label class="admin-label" for={ "edit-name-" + strconv.FormatInt(c.ID, 10) }>Názov</label>
+					<input id={ "edit-name-" + strconv.FormatInt(c.ID, 10) } name="name" type="text" required maxlength="200" value={ c.Name } class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for={ "edit-date-" + strconv.FormatInt(c.ID, 10) }>Dátum</label>
+					<input id={ "edit-date-" + strconv.FormatInt(c.ID, 10) } name="event_date" type="date" required value={ c.EventDate } class="admin-input"/>
+				</div>
+				<div class="flex gap-2">
+					<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+					<button type="button" class="admin-btn-row cursor-pointer" hx-get={ concertURL(c.ID, "") } hx-target="closest tr" hx-swap="outerHTML">Zrušiť</button>
+				</div>
+			</form>
+		</td>
+	</tr>
+}
+
+func concertURL(id int64, suffix string) string {
+	return "/admin/concerts/" + strconv.FormatInt(id, 10) + suffix
 }

@@ -1,4 +1,4 @@
-.PHONY: build dev test validate sqlc templ seed
+.PHONY: build dev test validate sqlc templ seed db-reset
 
 build:
 	go tool templ generate
@@ -33,3 +33,8 @@ sqlc:
 
 seed:
 	go run ./cmd/seed
+
+# Delete the local dev database (migrations re-run on next boot).
+# Dev only: never run against production data.
+db-reset:
+	rm -f ./data/app.db*

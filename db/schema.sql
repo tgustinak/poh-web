@@ -1,6 +1,6 @@
 -- Source of truth for sqlc code generation.
--- Mirrors db/migrations/00001_init.sql (sqlc cannot use goose
--- migration files directly because of the Down section).
+-- Mirrors db/migrations (sqlc cannot use goose
+-- migration files directly because of the Down sections).
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
@@ -18,3 +18,12 @@ CREATE TABLE sessions (
 
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
+
+CREATE TABLE concerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  event_date TEXT NOT NULL CHECK (event_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_concerts_event_date ON concerts(event_date);

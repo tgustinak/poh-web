@@ -7,12 +7,12 @@ import (
 )
 
 templ AdminLogs(entries []logbuffer.Entry, next uint64, csrf string) {
-	@AdminLayout("Logy", "logy", csrf) {
+	@AdminLayout("Logy", "logs", csrf) {
 		@AdminPageHeader("Logy", "Varovania a chyby, najnovšie navrchu")
 		<div class="mb-4">
 			<button
 				class="admin-btn-row"
-			 hx-get="/admin/logy/entries"
+			 hx-get="/admin/logs/entries"
 				hx-target="#log-entries"
 				hx-swap="innerHTML"
 			>Obnoviť</button>
@@ -59,7 +59,7 @@ templ LogRows(entries []logbuffer.Entry, next uint64, isScroll bool) {
 		if next != 0 {
 			<tr
 				id="log-more"
-				hx-get={ fmt.Sprintf("/admin/logy/entries?before=%d", next) }
+				hx-get={ fmt.Sprintf("/admin/logs/entries?before=%d", next) }
 				hx-trigger="revealed"
 				hx-swap="outerHTML"
 			>

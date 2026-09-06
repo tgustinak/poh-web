@@ -21,9 +21,19 @@ templ AdminScripts(csrf string) {
 				return;
 			}
 			t.textContent = msg;
-			t.classList.remove('hidden');
 			clearTimeout(window.__adminToastTimer);
-			window.__adminToastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+			clearTimeout(window.__adminToastHideTimer);
+			t.classList.remove('hidden', 'toast-leave');
+			void t.offsetWidth;
+			t.classList.add('toast-enter');
+			window.__adminToastTimer = setTimeout(() => {
+				t.classList.remove('toast-enter');
+				t.classList.add('toast-leave');
+				window.__adminToastHideTimer = setTimeout(() => {
+					t.classList.add('hidden');
+					t.classList.remove('toast-leave');
+				}, 230);
+			}, 2600);
 		}
 		document.body.addEventListener('showToast', (e) => {
 			const d = e.detail;

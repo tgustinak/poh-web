@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type Concert struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	EventDate string    `json:"event_date"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Session struct {
 	TokenHash string    `json:"token_hash"`
 	UserID    int64     `json:"user_id"`

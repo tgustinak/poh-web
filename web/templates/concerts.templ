@@ -2,7 +2,7 @@ package templates
 
 import "github.com/tgustinak/pohkapela.sk/internal/concerts"
 
-templ Concerts(concerts []concerts.Concert) {
+templ Concerts(upcoming []concerts.Concert, past []concerts.PastYear, pastCount int) {
 	<section id="koncerty" class="relative overflow-hidden bg-black border-t border-white/5">
 		<img
 			src="/static/images/concerts.png"
@@ -21,23 +21,46 @@ templ Concerts(concerts []concerts.Concert) {
 					Najbližšie sa vidíme — príď si nás vypočuť naživo.
 				</p>
 			</div>
-			if len(concerts) == 0 {
+			if len(upcoming) == 0 {
 				<div class="mt-12 max-w-2xl rounded-2xl border border-dashed border-white/20 bg-black/60 backdrop-blur px-6 py-10 text-center">
 					<p class="text-lg font-semibold text-white/90">Zatiaľ nemáme naplánované koncerty</p>
 					<p class="mt-2 text-sm text-white/50">Sleduj nás na sociálnych sieťach — nové termíny čoskoro pribudnú.</p>
 				</div>
 			} else {
 				<div class="mt-12 max-w-2xl">
-					@ConcertFeatured(concerts[0])
-					if len(concerts) > 1 {
+					@ConcertFeatured(upcoming[0])
+					if len(upcoming) > 1 {
 						<div class="mt-4 rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
 							<ul class="divide-y divide-white/10">
-								for _, c := range concerts[1:] {
+								for _, c := range upcoming[1:] {
 									@ConcertRow(c)
 								}
 							</ul>
 						</div>
 					}
+				</div>
+			}
+			if pastCount > 0 {
+				<div class="mt-8 max-w-2xl">
+					<details class="rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
+						<summary class="cursor-pointer px-5 sm:px-6 py-4 text-sm font-semibold text-white/70 transition hover:text-white">
+							Odohrané koncerty ({ pastCount })
+						</summary>
+						<div class="klip-list max-h-[380px] overflow-y-auto border-t border-white/10 px-5 sm:px-6 py-2">
+							for _, group := range past {
+								<p class="sticky top-0 bg-black/90 py-2 text-sm font-bold text-amber-400">{ group.Year }</p>
+								<ul class="pb-3">
+									for _, c := range group.Concerts {
+										<li class="py-1.5 text-sm text-white/70">
+											<span class="font-mono text-xs text-white/40">{ concerts.ShortDate(c.Date) }</span>
+											<span class="mx-2 text-white/25">—</span>
+											<span class="font-medium text-white/85">{ c.Name }</span>
+										</li>
+									}
+								</ul>
+							}
+						</div>
+					</details>
 				</div>
 			}
 			<div class="mt-10 max-w-2xl">
@@ -59,7 +82,6 @@ templ ConcertFeatured(c concerts.Concert) {
 		</div>
 		<div class="min-w-0">
 			<p class="text-xl sm:text-2xl font-bold text-white truncate">{ c.Name }</p>
-			<p class="mt-1 text-sm text-white/50">P.O.H • naživo</p>
 		</div>
 	</div>
 }
@@ -72,7 +94,6 @@ templ ConcertRow(c concerts.Concert) {
 		</div>
 		<div class="min-w-0 flex-1">
 			<p class="font-semibold text-white/90 truncate transition-colors group-hover:text-white">{ c.Name }</p>
-			<p class="mt-0.5 text-xs uppercase tracking-wider text-white/40">P.O.H • naživo</p>
 		</div>
 		<span class="shrink-0 h-px w-8 bg-white/15 transition-all duration-300 group-hover:w-12 group-hover:bg-amber-400"></span>
 	</li>
