@@ -1,5 +1,7 @@
 package templates
 
+import "github.com/tgustinak/pohkapela.sk/internal/scripts"
+
 // ConsentBanner renders the GDPR cookie consent banner for public pages.
 // The choice is stored in localStorage (no request to the server):
 //
@@ -19,6 +21,10 @@ templ ConsentBanner() {
 			<button type="button" onclick="pohConsentReject()" class="flex-1 rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white/70 transition hover:border-amber-400 hover:text-amber-400 cursor-pointer">Len nevyhnutné</button>
 		</div>
 	</div>
+	@scripts.Defer("consent", ConsentScripts())
+}
+
+templ ConsentScripts() {
 	<script>
 		(function() {
 			var KEY = 'poh-cookie-consent';
@@ -67,6 +73,7 @@ templ ConsentBanner() {
 				var f = document.createElement('iframe');
 				f.className = 'w-full block';
 				f.style.borderRadius = '0';
+				f.style.backgroundColor = '#121212';
 				f.width = '100%';
 				f.height = el.dataset.mediaHeight || '352';
 				f.setAttribute('allowfullscreen', '');

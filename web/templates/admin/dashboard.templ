@@ -1,18 +1,20 @@
 package templates
 
-templ AdminDashboard(csrf string) {
+import "fmt"
+
+templ AdminDashboard(csrf string, upcomingConcerts int64) {
 	@AdminLayout("Prehľad", "dashboard", csrf) {
 		@AdminPageHeader("Prehľad", "Správa obsahu webu pohkapela.sk")
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-			@AdminDashCard("/admin/hudba", "Hudba", "2 albumy", "Diskografia v sekcii Hudba")
-			@AdminDashCard("/admin/koncerty", "Koncerty", "6 koncertov", "Nadchádzajúce termíny")
+			@AdminDashCard("/admin/music", "Hudba", "2 albumy", "Diskografia v sekcii Hudba")
+			@AdminDashCard("/admin/concerts", "Koncerty", concertCountLabel(upcomingConcerts), "Nadchádzajúce termíny")
 			@AdminDashCard("/admin/merch", "Merch", "1 produkt", "Tričko Život")
-			@AdminDashCard("/admin/klipy", "Klipy", "9 videí", "YouTube playlist")
-			@AdminDashCard("/admin/o-nas", "O nás", "Text + citát", "Text sekcie O nás")
+			@AdminDashCard("/admin/videos", "Klipy", "9 videí", "YouTube playlist")
+			@AdminDashCard("/admin/about", "O nás", "Text + citát", "Text sekcie O nás")
 			@AdminDashCard("/admin/social", "Social", "6 sietí", "Linky na sociálne siete")
-			@AdminDashCard("/admin/kontakt", "Kontakt", "Manažérka", "Fotka, telefón, e-mail")
-			@AdminDashCard("/admin/organizatori", "Organizátori", "5 súborov", "Rider, fotky, logo")
-			@AdminDashCard("/admin/logy", "Logy", "naživo", "Logy aplikácie")
+			@AdminDashCard("/admin/contact", "Kontakt", "Manažérka", "Fotka, telefón, e-mail")
+			@AdminDashCard("/admin/organizers", "Organizátori", "5 súborov", "Rider, fotky, logo")
+			@AdminDashCard("/admin/logs", "Logy", "naživo", "Logy aplikácie")
 			<a href="/" target="_blank" rel="noopener" class="admin-card group transition hover:border-amber-400/40">
 				<p class="text-2xl font-bold text-white group-hover:text-amber-400">Web ↗</p>
 				<p class="mt-1 text-sm text-white/50">Otvoriť stránku v novom okne</p>
@@ -27,4 +29,15 @@ templ AdminDashCard(href string, title string, stat string, sub string) {
 		<p class="mt-1 text-sm font-semibold text-amber-400/90">{ stat }</p>
 		<p class="mt-1 text-sm text-white/50">{ sub }</p>
 	</a>
+}
+
+func concertCountLabel(n int64) string {
+	switch {
+	case n == 1:
+		return "1 koncert"
+	case n >= 2 && n <= 4:
+		return fmt.Sprintf("%d koncerty", n)
+	default:
+		return fmt.Sprintf("%d koncertov", n)
+	}
 }

@@ -1,5 +1,7 @@
 package templates
 
+import "github.com/tgustinak/pohkapela.sk/internal/static"
+
 // AdminScripts loads htmx and provides the shared admin toast.
 // Server handlers notify the client with an HX-Trigger response header:
 //
@@ -11,7 +13,7 @@ package templates
 // The csrf token is exposed via meta tag so htmx sends it back in the
 // X-CSRF-Token header on every mutating request (see RequireCsrf).
 templ AdminScripts(csrf string) {
-	<script src="/static/js/htmx.min.js"></script>
+	<script src={ static.URL("js/htmx.min.js") }></script>
 	<meta name="csrf-token" content={ csrf }/>
 	<div id="admin-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] text-center rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-black shadow-2xl"></div>
 	<script>
@@ -21,15 +23,33 @@ templ AdminScripts(csrf string) {
 				return;
 			}
 			t.textContent = msg;
-			t.classList.remove('hidden');
 			clearTimeout(window.__adminToastTimer);
-			window.__adminToastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+			clearTimeout(window.__adminToastHideTimer);
+			t.classList.remove('hidden', 'toast-leave');
+			void t.offsetWidth;
+			t.classList.add('toast-enter');
+			window.__adminToastTimer = setTimeout(() => {
+				t.classList.remove('toast-enter');
+				t.classList.add('toast-leave');
+				window.__adminToastHideTimer = setTimeout(() => {
+					t.classList.add('hidden');
+					t.classList.remove('toast-leave');
+				}, 230);
+			}, 2600);
 		}
 		document.body.addEventListener('showToast', (e) => {
 			const d = e.detail;
 			const msg = typeof d === 'string' ? d : (d && (d.message || d.value)) || '';
 			if (msg) {
 				adminToast(msg);
+			}
+		});
+		document.body.addEventListener('formReset', (e) => {
+			const d = e.detail;
+			const id = typeof d === 'string' ? d : (d && (d.value || d.message)) || '';
+			const form = id && document.getElementById(id);
+			if (form) {
+				form.reset();
 			}
 		});
 		document.body.addEventListener('htmx:configRequest', (e) => {

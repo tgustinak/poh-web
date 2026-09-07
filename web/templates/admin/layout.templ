@@ -1,6 +1,9 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/web/templates"
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/pohkapela.sk/web/templates"
+)
 
 templ AdminLayout(title string, active string, csrf string) {
 	@templates.Base("Admin – " + title) {
@@ -12,15 +15,15 @@ templ AdminLayout(title string, active string, csrf string) {
 				</div>
 				<nav class="flex-1 px-3 py-6 flex flex-col gap-1">
 					@AdminNavItem("/admin/dashboard", "Prehľad", active == "dashboard", "M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 14h7v6H4z")
-					@AdminNavItem("/admin/hudba", "Hudba", active == "hudba", "M9 18V5l11-2.5V16")
-					@AdminNavItem("/admin/koncerty", "Koncerty", active == "koncerty", "M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z")
+					@AdminNavItem("/admin/music", "Hudba", active == "music", "M9 18V5l11-2.5V16")
+					@AdminNavItem("/admin/concerts", "Koncerty", active == "concerts", "M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z")
 					@AdminNavItem("/admin/merch", "Merch", active == "merch", "M6 8h15l-1.5 12.5h-12zM9 8V6a3 3 0 016 0v2")
-					@AdminNavItem("/admin/klipy", "Klipy", active == "klipy", "M12 21a9 9 0 100-18 9 9 0 000 18zM10 8.5l6 3.5-6 3.5z")
-					@AdminNavItem("/admin/o-nas", "O nás", active == "o-nas", "M7 3h8l4 4v14H7zM15 3v4h4M10 12h5M10 16h5")
+					@AdminNavItem("/admin/videos", "Klipy", active == "videos", "M12 21a9 9 0 100-18 9 9 0 000 18zM10 8.5l6 3.5-6 3.5z")
+					@AdminNavItem("/admin/about", "O nás", active == "about", "M7 3h8l4 4v14H7zM15 3v4h4M10 12h5M10 16h5")
 					@AdminNavItem("/admin/social", "Social", active == "social", "M12 12a4 4 0 100-8 4 4 0 000 8zM16 8v5a3 3 0 01-6 0v-1a3 3 0 016 0")
-					@AdminNavItem("/admin/kontakt", "Kontakt", active == "kontakt", "M3 7l9 6 9-6M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z")
-					@AdminNavItem("/admin/organizatori", "Organizátori", active == "organizatori", "M3 8h18v11H3zM9 8V6a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18")
-					@AdminNavItem("/admin/logy", "Logy", active == "logy", "M4 6h16M4 12h16M4 18h10")
+					@AdminNavItem("/admin/contact", "Kontakt", active == "contact", "M3 7l9 6 9-6M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z")
+					@AdminNavItem("/admin/organizers", "Organizátori", active == "organizers", "M3 8h18v11H3zM9 8V6a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18")
+					@AdminNavItem("/admin/logs", "Logy", active == "logs", "M4 6h16M4 12h16M4 18h10")
 				</nav>
 				<div class="p-4 border-t border-white/10 flex flex-col gap-2">
 					<a href="/" target="_blank" rel="noopener" class="admin-nav-item">Zobraziť web <span aria-hidden="true">↗</span></a>
@@ -47,15 +50,15 @@ templ AdminLayout(title string, active string, csrf string) {
 					</div>
 					<nav class="flex gap-2 overflow-x-auto px-4 pb-3">
 						@AdminNavPill("/admin/dashboard", "Prehľad", active == "dashboard")
-						@AdminNavPill("/admin/hudba", "Hudba", active == "hudba")
-						@AdminNavPill("/admin/koncerty", "Koncerty", active == "koncerty")
+						@AdminNavPill("/admin/music", "Hudba", active == "music")
+						@AdminNavPill("/admin/concerts", "Koncerty", active == "concerts")
 						@AdminNavPill("/admin/merch", "Merch", active == "merch")
-						@AdminNavPill("/admin/klipy", "Klipy", active == "klipy")
-						@AdminNavPill("/admin/o-nas", "O nás", active == "o-nas")
+						@AdminNavPill("/admin/videos", "Klipy", active == "videos")
+						@AdminNavPill("/admin/about", "O nás", active == "about")
 						@AdminNavPill("/admin/social", "Social", active == "social")
-						@AdminNavPill("/admin/kontakt", "Kontakt", active == "kontakt")
-						@AdminNavPill("/admin/organizatori", "Organizátori", active == "organizatori")
-						@AdminNavPill("/admin/logy", "Logy", active == "logy")
+						@AdminNavPill("/admin/contact", "Kontakt", active == "contact")
+						@AdminNavPill("/admin/organizers", "Organizátori", active == "organizers")
+						@AdminNavPill("/admin/logs", "Logy", active == "logs")
 					</nav>
 				</div>
 				<main class="px-4 sm:px-8 py-8 sm:py-10 max-w-5xl">
@@ -64,7 +67,12 @@ templ AdminLayout(title string, active string, csrf string) {
 			</div>
 		</div>
 		@AdminScripts(csrf)
-		<script>
+		@scripts.Defer("admin-demo", AdminDemoScripts())
+	}
+}
+
+templ AdminDemoScripts() {
+	<script>
 			document.querySelectorAll('form[data-demo]').forEach(f => {
 				f.addEventListener('submit', (e) => {
 					e.preventDefault();
@@ -78,8 +86,7 @@ templ AdminLayout(title string, active string, csrf string) {
 					}
 				});
 			});
-		</script>
-	}
+	</script>
 }
 
 templ AdminNavItem(href string, label string, isActive bool, icon string) {

@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 
 	"github.com/tgustinak/pohkapela.sk/internal/admin"
@@ -45,7 +46,8 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 		_ = sqlDB.Close()
 	})
 
-	authSvc := auth.NewService(db.New(sqlDB))
+	queries := db.New(sqlDB)
+	authSvc := auth.NewService(queries)
 
 	created, err := authSvc.EnsureAdminUser(ctx, testAdminEmail, testAdminPassword)
 	if err != nil {
@@ -59,9 +61,11 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 	logs := logbuffer.New(10)
 
 	mux := app.NewMux(app.Deps{
-		Auth:        authSvc,
-		AuthHandler: admin.NewAuthHandler(authSvc),
-		LogsHandler: admin.NewLogsHandler(logs),
+		Auth:            authSvc,
+		Queries:         queries,
+		AuthHandler:     admin.NewAuthHandler(authSvc),
+		LogsHandler:     admin.NewLogsHandler(logs),
+		ConcertsHandler: admin.NewConcertsHandler(queries),
 	})
 
 	server := httptest.NewServer(mux)
@@ -389,7 +393,7 @@ func TestAdminLogsPage(t *testing.T) {
 	server, logs := testServer(t)
 	client := testClient(t)
 
-	resp, err := client.Get(server.URL + "/admin/logy")
+	resp, err := client.Get(server.URL + "/admin/logs")
 	if err != nil {
 		t.Fatalf("get logs: %v", err)
 	}
@@ -401,7 +405,7 @@ func TestAdminLogsPage(t *testing.T) {
 	resp = postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
 	assertRedirect(t, resp, "/admin/dashboard")
 
-	resp, err = client.Get(server.URL + "/admin/logy")
+	resp, err = client.Get(server.URL + "/admin/logs")
 	if err != nil {
 		t.Fatalf("get logs after login: %v", err)
 	}
@@ -413,7 +417,7 @@ func TestAdminLogsPage(t *testing.T) {
 	body := readBody(t, resp)
 	// A single entry fits on one page, so no infinite-scroll sentinel
 	// is rendered (pagination is covered by TestAdminLogsEntriesPagination).
-	for _, want := range []string{"Logy", "test warning", "/admin/logy/entries"} {
+	for _, want := range []string{"Logy", "test warning", "/admin/logs/entries"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected logs page to contain %q", want)
 		}
@@ -434,7 +438,7 @@ func TestAdminLogsEntriesPagination(t *testing.T) {
 	getEntries := func(query string) string {
 		t.Helper()
 
-		resp, err := client.Get(server.URL + "/admin/logy/entries" + query)
+		resp, err := client.Get(server.URL + "/admin/logs/entries" + query)
 		if err != nil {
 			t.Fatalf("get entries %s: %v", query, err)
 		}
@@ -492,6 +496,36 @@ func entriesCursor(t *testing.T, body string) string {
 	}
 
 	return rest[:end]
+}
+
+func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+
+	// Deferred page scripts must render grouped right before </body>,
+	// not scattered between sections.
+	lastSection := strings.LastIndex(body, "</section>")
+	firstScript := strings.Index(body, "<script")
+	if firstScript < 0 {
+		t.Fatal("expected deferred scripts in home page")
+	}
+
+	if firstScript < lastSection {
+		t.Fatal("expected all scripts after the last section")
+	}
+
+	for _, want := range []string{"past-accordion", "klipPlay", "merchShow", "pohConsentAccept", "sectionObserver"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected flushed script %q in home page", want)
+		}
+	}
 }
 
 func TestCookieConsentBanner(t *testing.T) {
@@ -552,4 +586,117 @@ func TestMediaEmbedsGatedBehindConsent(t *testing.T) {
 			t.Fatalf("expected home to contain %q", want)
 		}
 	}
+}
+
+// TestAdminConcertsFlow covers concert management end to end:
+// login -> create upcoming and past concerts -> both visible
+// appropriately on the web -> delete -> gone everywhere.
+func TestAdminConcertsFlow(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	future := time.Now().AddDate(0, 0, 30).Format("2006-01-02")
+	past := time.Now().AddDate(0, 0, -30).Format("2006-01-02")
+
+	createConcert := func(name, date string) {
+		t.Helper()
+
+		csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+		form := url.Values{"name": {name}, "event_date": {date}, "csrf_token": {csrf}}
+
+		req, err := http.NewRequest(http.MethodPost, server.URL+"/admin/concerts", strings.NewReader(form.Encode()))
+		if err != nil {
+			t.Fatalf("create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("post concert: %v", err)
+		}
+		resp.Body.Close()
+		assertRedirect(t, resp, "/admin/concerts")
+	}
+
+	createConcert("Budúci koncert", future)
+	createConcert("Minulý koncert", past)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{"Budúci koncert", "Odohrané koncerty (1)", "Minulý koncert"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
+	}
+
+	resp, err = client.Get(server.URL + "/admin/dashboard")
+	if err != nil {
+		t.Fatalf("get dashboard: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "1 koncert") {
+		t.Fatalf("expected dashboard concert count, got %q", body)
+	}
+
+	// Scrape the concert id from the admin list and delete it.
+	resp, err = client.Get(server.URL + "/admin/concerts")
+	if err != nil {
+		t.Fatalf("get admin concerts: %v", err)
+	}
+
+	adminBody := readBody(t, resp)
+	id := scrapeConcertID(t, adminBody)
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, server.URL+"/admin/concerts/"+id, nil)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	deleteReq.Header.Set("HX-Request", "true")
+	deleteReq.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete concert: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after delete: %v", err)
+	}
+
+	if body := readBody(t, resp); strings.Contains(body, "Budúci koncert") {
+		t.Fatal("expected deleted concert to disappear from home")
+	}
+}
+
+func scrapeConcertID(t *testing.T, body string) string {
+	t.Helper()
+
+	const prefix = `hx-delete="/admin/concerts/`
+	idx := strings.Index(body, prefix)
+	if idx < 0 {
+		t.Fatalf("expected delete button, got %q", body)
+	}
+
+	rest := body[idx+len(prefix):]
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+	if end <= 0 {
+		t.Fatalf("expected numeric concert id, got %q", body)
+	}
+
+	return rest[:end]
 }

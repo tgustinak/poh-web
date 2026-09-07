@@ -3,8 +3,13 @@
 @source "../../../web";
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   html {
     scroll-behavior: smooth;
+    background-color: #000;
   }
 
   body {
@@ -101,6 +106,36 @@
     }
   }
 
+  .toast-enter {
+    animation: toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+  }
+
+  .toast-leave {
+    animation: toast-out 0.22s ease-in both;
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 16px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
+    }
+  }
+
+  @keyframes toast-out {
+    from {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, 10px);
+    }
+  }
+
   .hero-kenburns {
     animation: hero-zoom 24s ease-in-out infinite alternate;
   }
@@ -159,6 +194,13 @@
     .cookie-banner-enter,
     .cookie-banner-leave {
       animation: none;
+    }
+    .toast-enter,
+    .toast-leave {
+      animation: none;
+    }
+    .past-body {
+      transition: none;
     }
   }
 
@@ -261,5 +303,15 @@
 
   .klip-list::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  .past-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+
+  details[open] .past-body {
+    max-height: 420px;
   }
 }

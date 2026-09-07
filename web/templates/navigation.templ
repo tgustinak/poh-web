@@ -1,5 +1,7 @@
 package templates
 
+import "github.com/tgustinak/pohkapela.sk/internal/scripts"
+
 templ Navigation() {
 	<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent border-b border-transparent">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,6 +60,10 @@ templ Navigation() {
 			<a href="/pre-organizatorov" class="mobile-nav-org" style="animation-delay:340ms">Pre organizátorov</a>
 		</div>
 	</div>
+	@scripts.Defer("navigation", NavigationScripts())
+}
+
+templ NavigationScripts() {
 	<script>
 		const navbar = document.getElementById('navbar');
 		const navbarInner = document.getElementById('navbar-inner');

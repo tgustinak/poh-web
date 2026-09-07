@@ -1,8 +1,11 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/internal/concerts"
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/concerts"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+)
 
-templ Concerts(concerts []concerts.Concert) {
+templ Concerts(data ConcertsData) {
 	<section id="koncerty" class="relative overflow-hidden bg-black border-t border-white/5">
 		<img
 			src="/static/images/concerts.png"
@@ -21,23 +24,49 @@ templ Concerts(concerts []concerts.Concert) {
 					Najbližšie sa vidíme — príď si nás vypočuť naživo.
 				</p>
 			</div>
-			if len(concerts) == 0 {
+			if len(data.Upcoming) == 0 {
 				<div class="mt-12 max-w-2xl rounded-2xl border border-dashed border-white/20 bg-black/60 backdrop-blur px-6 py-10 text-center">
 					<p class="text-lg font-semibold text-white/90">Zatiaľ nemáme naplánované koncerty</p>
 					<p class="mt-2 text-sm text-white/50">Sleduj nás na sociálnych sieťach — nové termíny čoskoro pribudnú.</p>
 				</div>
 			} else {
 				<div class="mt-12 max-w-2xl">
-					@ConcertFeatured(concerts[0])
-					if len(concerts) > 1 {
+					@ConcertFeatured(data.Upcoming[0])
+					if len(data.Upcoming) > 1 {
 						<div class="mt-4 rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
 							<ul class="divide-y divide-white/10">
-								for _, c := range concerts[1:] {
+								for _, c := range data.Upcoming[1:] {
 									@ConcertRow(c)
 								}
 							</ul>
 						</div>
 					}
+				</div>
+			}
+			if data.PastCount > 0 {
+				<div class="mt-8 max-w-2xl">
+					<details class="group past-accordion rounded-2xl border border-white/10 bg-black/60 backdrop-blur overflow-hidden">
+						<summary class="flex cursor-pointer list-none items-center gap-3 px-5 sm:px-6 py-4 text-sm font-semibold text-white/70 transition hover:text-white [&::-webkit-details-marker]:hidden">
+							<svg class="w-4 h-4 shrink-0 text-amber-400 transition-transform duration-300 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+							Odohrané koncerty ({ data.PastCount })
+						</summary>
+						<div class="past-body">
+							<div class="klip-list max-h-[380px] overflow-y-auto border-t border-white/10 px-5 sm:px-6 pb-2">
+								for _, group := range data.Past {
+									<p class="sticky top-0 -mx-5 sm:-mx-6 bg-black/90 px-5 sm:px-6 py-2 text-sm font-bold text-amber-400 backdrop-blur-sm">{ group.Year }</p>
+									<ul class="pb-3">
+										for _, c := range group.Concerts {
+											<li class="py-1.5 text-sm text-white/70">
+												<span class="font-mono text-xs text-white/40">{ concerts.ShortDate(c.Date) }</span>
+												<span class="mx-2 text-white/25">—</span>
+												<span class="font-medium text-white/85">{ c.Name }</span>
+											</li>
+										}
+									</ul>
+								}
+							</div>
+						</div>
+					</details>
 				</div>
 			}
 			<div class="mt-10 max-w-2xl">
@@ -48,6 +77,47 @@ templ Concerts(concerts []concerts.Concert) {
 			</div>
 		</div>
 	</section>
+	@scripts.Defer("concerts", ConcertsScripts())
+}
+
+templ ConcertsScripts() {
+	<script>
+		document.querySelectorAll('details.past-accordion').forEach((d) => {
+			const summary = d.querySelector('summary');
+			const body = d.querySelector('.past-body');
+			if (!summary || !body) {
+				return;
+			}
+			let anim = null;
+			const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const targetHeight = () => Math.min(body.scrollHeight, 420);
+			summary.addEventListener('click', (e) => {
+				e.preventDefault();
+				if (reducedMotion) {
+					d.open = !d.open;
+					return;
+				}
+				if (anim) {
+					anim.cancel();
+				}
+				if (!d.open) {
+					d.open = true;
+					const h = targetHeight();
+					anim = body.animate([{ maxHeight: '0px' }, { maxHeight: h + 'px' }], { duration: 350, easing: 'ease' });
+					anim.onfinish = () => {
+						anim = null;
+					};
+				} else {
+					const h = body.offsetHeight;
+					anim = body.animate([{ maxHeight: h + 'px' }, { maxHeight: '0px' }], { duration: 300, easing: 'ease' });
+					anim.onfinish = () => {
+						d.open = false;
+						anim = null;
+					};
+				}
+			});
+		});
+	</script>
 }
 
 templ ConcertFeatured(c concerts.Concert) {
@@ -59,7 +129,6 @@ templ ConcertFeatured(c concerts.Concert) {
 		</div>
 		<div class="min-w-0">
 			<p class="text-xl sm:text-2xl font-bold text-white truncate">{ c.Name }</p>
-			<p class="mt-1 text-sm text-white/50">P.O.H • naživo</p>
 		</div>
 	</div>
 }
@@ -72,7 +141,6 @@ templ ConcertRow(c concerts.Concert) {
 		</div>
 		<div class="min-w-0 flex-1">
 			<p class="font-semibold text-white/90 truncate transition-colors group-hover:text-white">{ c.Name }</p>
-			<p class="mt-0.5 text-xs uppercase tracking-wider text-white/40">P.O.H • naživo</p>
 		</div>
 		<span class="shrink-0 h-px w-8 bg-white/15 transition-all duration-300 group-hover:w-12 group-hover:bg-amber-400"></span>
 	</li>

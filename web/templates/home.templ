@@ -1,8 +1,6 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/internal/concerts"
-
-templ Home() {
+templ Home(data HomeData) {
 	@Base("P.O.H") {
 		@Navigation()
 		<!-- hero -->
@@ -33,14 +31,7 @@ templ Home() {
 		<!-- music -->
 		@Music()
 		<!-- concerts -->
-		@Concerts([]concerts.Concert{
-			{Name: "Kubínsky Jarmok", Day: 18, Month: "Jan"},
-			{Name: "Kubínsky Jarmok", Day: 11, Month: "Feb"},
-			{Name: "Kubínsky Jarmok", Day: 1, Month: "Mar"},
-			{Name: "Kubínsky Jarmok", Day: 8, Month: "Apr"},
-			{Name: "Kubínsky Jarmok", Day: 18, Month: "Sep"},
-			{Name: "Gustove Narodky", Day: 26, Month: "Oct"},
-		})
+		@Concerts(data.Concerts)
 		<!-- merch -->
 		@Merch()
 		<!-- video -->
