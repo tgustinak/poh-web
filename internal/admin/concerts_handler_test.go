@@ -51,12 +51,24 @@ func futureDate(days int) string {
 func toastMessage(t *testing.T, rec *httptest.ResponseRecorder) string {
 	t.Helper()
 
+	return triggerPayload(t, rec)["showToast"]
+}
+
+func formReset(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+
+	return triggerPayload(t, rec)["formReset"]
+}
+
+func triggerPayload(t *testing.T, rec *httptest.ResponseRecorder) map[string]string {
+	t.Helper()
+
 	var payload map[string]string
 	if err := json.Unmarshal([]byte(rec.Header().Get("HX-Trigger")), &payload); err != nil {
 		t.Fatalf("decode HX-Trigger: %v", err)
 	}
 
-	return payload["showToast"]
+	return payload
 }
 
 func pastDate(days int) string {
@@ -121,6 +133,10 @@ func TestConcertsCreate(t *testing.T) {
 
 	if toastMessage(t, rec) != "Koncert pridaný." {
 		t.Fatalf("expected success toast, got %q", rec.Header().Get("HX-Trigger"))
+	}
+
+	if formReset(t, rec) != "concert-create-form" {
+		t.Fatalf("expected form reset trigger, got %q", rec.Header().Get("HX-Trigger"))
 	}
 
 	if body := rec.Body.String(); !strings.Contains(body, "Nový koncert") {

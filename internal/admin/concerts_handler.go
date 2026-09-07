@@ -78,9 +78,9 @@ func (h *ConcertsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	htmx.Trigger(w, map[string]string{
-		"showToast":        "Koncert pridaný.",
-		"concertFormReset": "true",
+	htmx.Trigger(w, htmx.Events{
+		ShowToast: "Koncert pridaný.",
+		FormReset: "concert-create-form",
 	})
 	h.renderTables(w, r)
 }

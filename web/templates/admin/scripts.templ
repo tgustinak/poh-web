@@ -44,6 +44,14 @@ templ AdminScripts(csrf string) {
 				adminToast(msg);
 			}
 		});
+		document.body.addEventListener('formReset', (e) => {
+			const d = e.detail;
+			const id = typeof d === 'string' ? d : (d && (d.value || d.message)) || '';
+			const form = id && document.getElementById(id);
+			if (form) {
+				form.reset();
+			}
+		});
 		document.body.addEventListener('htmx:configRequest', (e) => {
 			const m = document.querySelector('meta[name="csrf-token"]');
 			if (m) {

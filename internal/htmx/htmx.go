@@ -38,13 +38,25 @@ func Redirect(w http.ResponseWriter, r *http.Request, target string) {
 // A 200 status is used deliberately: htmx skips trigger processing
 // for error responses.
 func Toast(w http.ResponseWriter, msg string) {
-	Trigger(w, map[string]string{"showToast": msg})
+	Trigger(w, Events{ShowToast: msg})
 }
 
-// Trigger fires custom client-side events via HX-Trigger.
+// Events is the abstract set of client-side events sent via HX-Trigger.
+// Field names are enforced by the compiler; each needs a
+// document.body listener on the client (see AdminScripts).
+// No entity names belong here — payloads carry the specifics
+// (e.g. FormReset holds a form element id).
+type Events struct {
+	// ShowToast displays a toast with the message.
+	ShowToast string `json:"showToast,omitempty"`
+	// FormReset resets the form with the given element id.
+	FormReset string `json:"formReset,omitempty"`
+}
+
+// Trigger fires client-side events via HX-Trigger.
 // Values must be ASCII-safe (see headerJSON); the client listens
 // for them with document.body.addEventListener.
-func Trigger(w http.ResponseWriter, events map[string]string) {
+func Trigger(w http.ResponseWriter, events Events) {
 	payload, err := headerJSON(events)
 	if err != nil {
 		http.Error(w, "Interná chyba servera", http.StatusInternalServerError)

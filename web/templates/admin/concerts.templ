@@ -5,7 +5,6 @@ import (
 
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/scripts"
 )
 
 templ AdminConcerts(upcoming []db.Concert, past []db.Concert, csrf string) {
@@ -31,16 +30,7 @@ templ AdminConcerts(upcoming []db.Concert, past []db.Concert, csrf string) {
 		<div id="concert-tables" class="mt-6">
 			@AdminConcertTables(upcoming, past)
 		</div>
-		@scripts.Defer("concert-form", ConcertFormScripts())
 	}
-}
-
-templ ConcertFormScripts() {
-	<script>
-			document.body.addEventListener('concertFormReset', () => {
-				document.getElementById('concert-create-form')?.reset();
-			});
-	</script>
 }
 
 templ AdminConcertTables(upcoming []db.Concert, past []db.Concert) {
