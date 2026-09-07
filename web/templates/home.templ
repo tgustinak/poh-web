@@ -1,8 +1,6 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/internal/concerts"
-
-templ Home(upcoming []concerts.Concert, past []concerts.PastYear, pastCount int) {
+templ Home(data HomeData) {
 	@Base("P.O.H") {
 		@Navigation()
 		<!-- hero -->
@@ -33,7 +31,7 @@ templ Home(upcoming []concerts.Concert, past []concerts.PastYear, pastCount int)
 		<!-- music -->
 		@Music()
 		<!-- concerts -->
-		@Concerts(upcoming, past, pastCount)
+		@Concerts(data.Concerts)
 		<!-- merch -->
 		@Merch()
 		<!-- video -->

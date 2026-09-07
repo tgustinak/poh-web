@@ -61,9 +61,7 @@ func NewMux(deps Deps) http.Handler {
 		w.WriteHeader(http.StatusOK)
 
 		renderTemplate(templates.Home(
-			concerts.FromDBMany(upcoming),
-			concerts.GroupPastByYear(past),
-			len(past),
+			templates.NewHomeData(templates.NewConcertsData(upcoming, past)),
 		), w, r)
 	})
 
