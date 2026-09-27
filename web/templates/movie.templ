@@ -1,8 +1,13 @@
 package templates
 
-import "github.com/tgustinak/pohkapela.sk/internal/scripts"
+import (
+	"strconv"
 
-templ Klipy() {
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/pohkapela.sk/internal/videos"
+)
+
+templ Klipy(clips []videos.Video) {
 	<section id="klipy" class="bg-black border-t border-white/5">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
 			<div class="text-center">
@@ -12,65 +17,63 @@ templ Klipy() {
 					Od najnovšieho singla až po naše prvé video. Vyber si z playlistu.
 				</p>
 			</div>
-			<div class="mt-16 grid gap-8 lg:grid-cols-5 items-start">
-				<div class="lg:col-span-3">
-					<div id="klip-player-card" class="rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl shadow-black/60">
-						<div class="aspect-video" id="klip-player-wrap" data-yt-embed data-current="7Msu0l_5Pi0">
-							<div data-yt-placeholder class="relative w-full h-full">
-								<img
-									src="https://i.ytimg.com/vi/7Msu0l_5Pi0/hqdefault.jpg"
-									alt="Náhľad videa Nechcem zabudnúť"
-									class="absolute inset-0 w-full h-full object-cover"
-									loading="lazy"
-								/>
-								<button
-									type="button"
-									class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 cursor-pointer"
-									data-id="7Msu0l_5Pi0"
-									data-title="Nechcem zabudnúť"
-									data-date="19. 6. 2026"
-									data-duration="4:24"
-									onclick="klipPlay(this)"
+			if len(clips) == 0 {
+				<p class="mt-16 text-center text-white/50">Zatiaľ žiadne klipy.</p>
+			} else {
+				<div class="mt-16 grid gap-8 lg:grid-cols-5 items-start">
+					<div class="lg:col-span-3">
+						<div id="klip-player-card" class="rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl shadow-black/60">
+							<div class="aspect-video" id="klip-player-wrap" data-yt-embed data-current={ clips[0].YoutubeID }>
+								<div data-yt-placeholder class="relative w-full h-full">
+									<img
+										src={ "https://i.ytimg.com/vi/" + clips[0].YoutubeID + "/hqdefault.jpg" }
+										alt={ "Náhľad videa " + clips[0].Title }
+										class="absolute inset-0 w-full h-full object-cover"
+										loading="lazy"
+									/>
+									<button
+										type="button"
+										class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 cursor-pointer"
+										data-id={ clips[0].YoutubeID }
+										data-title={ clips[0].Title }
+										data-date={ clips[0].Date }
+										data-duration={ clips[0].Duration }
+										onclick="klipPlay(this)"
+									>
+										<span class="flex items-center justify-center w-16 h-16 rounded-full bg-amber-400 text-black transition hover:scale-105">
+											<svg class="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+										</span>
+										<span class="rounded-full border border-white/25 bg-black/70 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white/85">Načítať video</span>
+									</button>
+								</div>
+							</div>
+							<div class="px-6 py-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10">
+								<div class="min-w-0">
+									<h3 id="klip-title" class="text-xl font-bold text-white truncate">{ clips[0].Title }</h3>
+									<p id="klip-meta" class="mt-1 text-sm text-white/50">{ clips[0].Date } • { clips[0].Duration }</p>
+								</div>
+								<a
+									id="klip-link"
+									href={ "https://www.youtube.com/watch?v=" + clips[0].YoutubeID }
+									target="_blank"
+									rel="noopener"
+									class="shrink-0 text-sm font-medium text-white/60 transition hover:text-amber-400"
 								>
-									<span class="flex items-center justify-center w-16 h-16 rounded-full bg-amber-400 text-black transition hover:scale-105">
-										<svg class="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
-									</span>
-									<span class="rounded-full border border-white/25 bg-black/70 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white/85">Načítať video</span>
-								</button>
+									Pozrieť na YouTube ↗
+								</a>
 							</div>
 						</div>
-						<div class="px-6 py-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10">
-							<div class="min-w-0">
-								<h3 id="klip-title" class="text-xl font-bold text-white truncate">Nechcem zabudnúť</h3>
-								<p id="klip-meta" class="mt-1 text-sm text-white/50">19. 6. 2026 • 4:24</p>
-							</div>
-							<a
-								id="klip-link"
-								href="https://www.youtube.com/watch?v=7Msu0l_5Pi0"
-								target="_blank"
-								rel="noopener"
-								class="shrink-0 text-sm font-medium text-white/60 transition hover:text-amber-400"
-							>
-								Pozrieť na YouTube ↗
-							</a>
+					</div>
+					<div class="lg:col-span-2">
+						<p id="klip-list-head" class="px-1 pb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Všetky klipy • { strconv.Itoa(len(clips)) }</p>
+						<div id="klip-list" class="klip-list flex flex-col gap-3 lg:overflow-y-auto lg:pr-2">
+							for i, c := range clips {
+								@KlipRow(c.YoutubeID, c.Title, c.Date, c.Duration, i == 0)
+							}
 						</div>
 					</div>
 				</div>
-				<div class="lg:col-span-2">
-					<p id="klip-list-head" class="px-1 pb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Všetky klipy • 9</p>
-					<div id="klip-list" class="klip-list flex flex-col gap-3 lg:overflow-y-auto lg:pr-2">
-						@KlipRow("7Msu0l_5Pi0", "Nechcem zabudnúť", "19. 6. 2026", "4:24", true)
-						@KlipRow("ylJqEmM-Sjo", "Kubín", "16. 4. 2025", "3:20", false)
-						@KlipRow("BB56qBn2wtA", "Mám otázku", "13. 2. 2024", "3:42", false)
-						@KlipRow("AxT7ni2COK4", "Nenechaj ma ísť", "28. 1. 2024", "3:38", false)
-						@KlipRow("7tgNr5sWXds", "Vrátiť sa", "12. 7. 2023", "4:42", false)
-						@KlipRow("AWmVqHcHn5c", "Na konci sveta", "23. 3. 2023", "4:34", false)
-						@KlipRow("KKd_lv_zC5E", "Spievaj mi", "10. 2. 2022", "4:24", false)
-						@KlipRow("Qx7rHKYHRAE", "Voz veľkých hviezd", "25. 8. 2019", "5:11", false)
-						@KlipRow("nxsVT3s9ibM", "Prečo", "17. 11. 2018", "4:42", false)
-					</div>
-				</div>
-			</div>
+			}
 		</div>
 	</section>
 	@scripts.Defer("klipy", KlipyScripts())

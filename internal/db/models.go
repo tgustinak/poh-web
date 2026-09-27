@@ -29,3 +29,13 @@ type User struct {
 	PasswordHash string    `json:"password_hash"`
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+type Video struct {
+	ID            int64     `json:"id"`
+	YoutubeID     string    `json:"youtube_id"`
+	Title         string    `json:"title"`
+	PublishedDate string    `json:"published_date"`
+	Duration      string    `json:"duration"`
+	Position      int64     `json:"position"`
+	CreatedAt     time.Time `json:"created_at"`
+}

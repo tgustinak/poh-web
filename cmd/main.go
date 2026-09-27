@@ -67,6 +67,7 @@ func main() {
 		AuthHandler:     admin.NewAuthHandler(authSvc),
 		LogsHandler:     admin.NewLogsHandler(logs),
 		ConcertsHandler: admin.NewConcertsHandler(queries),
+		VideosHandler:   admin.NewVideosHandler(queries),
 	}))
 
 	srv.Start()

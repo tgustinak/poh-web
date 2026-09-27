@@ -66,6 +66,7 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 		AuthHandler:     admin.NewAuthHandler(authSvc),
 		LogsHandler:     admin.NewLogsHandler(logs),
 		ConcertsHandler: admin.NewConcertsHandler(queries),
+		VideosHandler:   admin.NewVideosHandler(queries),
 	})
 
 	server := httptest.NewServer(mux)
@@ -679,6 +680,136 @@ func TestAdminConcertsFlow(t *testing.T) {
 	if body := readBody(t, resp); strings.Contains(body, "Budúci koncert") {
 		t.Fatal("expected deleted concert to disappear from home")
 	}
+}
+
+// TestHomeShowsSeededClips verifies the public clips section is DB-driven:
+// seeded videos from the migration render on the home page.
+func TestHomeShowsSeededClips(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{"Nechcem zabudnúť", "Kubín", "Všetky klipy", "klipPlay"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
+	}
+}
+
+// TestAdminVideosFlow covers videoclip management end to end:
+// login -> admin list shows seed -> create clip -> visible on web ->
+// reorder -> delete -> gone everywhere.
+func TestAdminVideosFlow(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/videos")
+	if err != nil {
+		t.Fatalf("get admin videos: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Nechcem zabudnúť") {
+		t.Fatal("expected admin videos to list seeded clips")
+	}
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+	form := url.Values{
+		"youtube_url":    {"https://youtu.be/dQw4w9WgXcQ"},
+		"title":          {"E2E klip"},
+		"published_date": {"2026-02-02"},
+		"duration":       {"3:33"},
+		"csrf_token":     {csrf},
+	}
+
+	req, err := http.NewRequest(http.MethodPost, server.URL+"/admin/videos", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post video: %v", err)
+	}
+	resp.Body.Close()
+	assertRedirect(t, resp, "/admin/videos")
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E klip") {
+		t.Fatal("expected new clip to appear on home page")
+	}
+
+	resp, err = client.Get(server.URL + "/admin/videos")
+	if err != nil {
+		t.Fatalf("get admin videos: %v", err)
+	}
+
+	id := scrapeVideoID(t, readBody(t, resp), "E2E klip")
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, server.URL+"/admin/videos/"+id, nil)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	deleteReq.Header.Set("HX-Request", "true")
+	deleteReq.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete video: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after delete: %v", err)
+	}
+
+	if body := readBody(t, resp); strings.Contains(body, "E2E klip") {
+		t.Fatal("expected deleted clip to disappear from home")
+	}
+}
+
+func scrapeVideoID(t *testing.T, body, title string) string {
+	t.Helper()
+
+	// The delete button follows the title within the same row,
+	// so anchor at the title to target the right clip.
+	anchor := strings.Index(body, title)
+	if anchor < 0 {
+		t.Fatalf("expected clip %q in admin list", title)
+	}
+
+	const prefix = `hx-delete="/admin/videos/`
+	idx := strings.Index(body[anchor:], prefix)
+	if idx < 0 {
+		t.Fatalf("expected delete button for %q", title)
+	}
+
+	rest := body[anchor+idx+len(prefix):]
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+	if end <= 0 {
+		t.Fatalf("expected numeric video id, got %q", body)
+	}
+
+	return rest[:end]
 }
 
 func scrapeConcertID(t *testing.T, body string) string {

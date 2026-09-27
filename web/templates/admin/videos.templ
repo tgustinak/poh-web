@@ -1,10 +1,56 @@
 package templates
 
-templ AdminVideos(csrf string) {
+import (
+	"strconv"
+
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/pohkapela.sk/internal/videos"
+)
+
+templ AdminVideos(rows []db.Video, csrf string) {
 	@AdminLayout("Klipy", "videos", csrf) {
 		@AdminPageHeader("Klipy – videoklipy", "Poradie v playliste, od najnovšieho")
 		<div class="admin-card">
-			<div class="overflow-x-auto">
+			<h2 class="text-xl font-bold text-white">Pridať videoklip</h2>
+			<form id="video-create-form" method="POST" action="/admin/videos" hx-post="/admin/videos" hx-target="#video-list" hx-swap="innerHTML" class="mt-5 grid gap-4 sm:grid-cols-2">
+				<input type="hidden" name="csrf_token" value={ csrf }/>
+				<div class="sm:col-span-2">
+					<label class="admin-label" for="video-url">YouTube URL alebo ID</label>
+					<input id="video-url" name="youtube_url" type="text" required maxlength="200" placeholder="https://www.youtube.com/watch?v=…" class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for="video-title">Názov</label>
+					<input id="video-title" name="title" type="text" required maxlength="200" placeholder="Názov klipu" class="admin-input"/>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="admin-label" for="video-date">Dátum publikovania</label>
+						<input id="video-date" name="published_date" type="date" required class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for="video-duration">Dĺžka (M:SS)</label>
+						<input id="video-duration" name="duration" type="text" required pattern="[0-9]{1,3}:[0-5][0-9]" placeholder="4:24" class="admin-input"/>
+					</div>
+				</div>
+				<div class="sm:col-span-2 flex items-end">
+					<button type="submit" class="admin-btn">Pridať videoklip</button>
+				</div>
+			</form>
+		</div>
+		<div id="video-list" class="mt-6">
+			@AdminVideoList(rows)
+		</div>
+		@scripts.Defer("videos", AdminVideosScripts())
+	}
+}
+
+templ AdminVideoList(rows []db.Video) {
+	<div class="admin-card">
+		if len(rows) == 0 {
+			<p class="mt-3 text-sm text-white/50">Zatiaľ žiadne klipy. Pridaj prvý cez formulár vyššie.</p>
+		} else {
+			<div class="mt-3 overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
@@ -15,54 +61,219 @@ templ AdminVideos(csrf string) {
 							<th class="pb-3 font-semibold text-right">Akcie</th>
 						</tr>
 					</thead>
-					<tbody>
-						@AdminVideoRow("1", "Nechcem zabudnúť", "19. 6. 2026", "4:24", "7Msu0l_5Pi0")
-						@AdminVideoRow("2", "Kubín", "16. 4. 2025", "3:20", "ylJqEmM-Sjo")
-						@AdminVideoRow("3", "Mám otázku", "13. 2. 2024", "3:42", "BB56qBn2wtA")
-						@AdminVideoRow("4", "Nenechaj ma ísť", "28. 1. 2024", "3:38", "AxT7ni2COK4")
-						@AdminVideoRow("5", "Vrátiť sa", "12. 7. 2023", "4:42", "7tgNr5sWXds")
-						@AdminVideoRow("6", "Na konci sveta", "23. 3. 2023", "4:34", "AWmVqHcHn5c")
-						@AdminVideoRow("7", "Spievaj mi", "10. 2. 2022", "4:24", "KKd_lv_zC5E")
-						@AdminVideoRow("8", "Voz veľkých hviezd", "25. 8. 2019", "5:11", "Qx7rHKYHRAE")
-						@AdminVideoRow("9", "Prečo", "17. 11. 2018", "4:42", "nxsVT3s9ibM")
+					<tbody id="video-list-body">
+						for i, v := range rows {
+							@AdminVideoRow(v, i+1)
+						}
 					</tbody>
 				</table>
 			</div>
-		</div>
-		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
-			<h2 class="text-xl font-bold text-white">Pridať videoklip</h2>
-			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
-				<div class="sm:col-span-2">
-					<label class="admin-label" for="video-url">YouTube URL</label>
-					<input id="video-url" type="url" placeholder="https://www.youtube.com/watch?v=…" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="video-title">Názov (nepovinné – načíta sa z YouTube)</label>
-					<input id="video-title" type="text" placeholder="Názov klipu" class="admin-input"/>
-				</div>
-				<div class="flex items-end">
-					<button type="submit" class="admin-btn">Pridať videoklip</button>
-				</div>
-			</form>
-		</div>
-	}
+		}
+	</div>
 }
 
-templ AdminVideoRow(order string, title string, date string, duration string, videoID string) {
-	<tr class="border-t border-white/10">
-		<td class="py-3 pr-4 text-white/40">{ order }</td>
-		<td class="py-3 pr-4">
-			<span class="block font-semibold text-white">{ title }</span>
-			<span class="block text-xs text-white/40">{ videoID }</span>
+templ AdminVideoRow(v db.Video, pos int) {
+	<tr class="border-t border-white/10 cursor-grab" data-id={ strconv.FormatInt(v.ID, 10) } draggable="true">
+		<td class="py-3 pr-4 whitespace-nowrap">
+			<span class="inline-flex items-center gap-2">
+				<span class="inline-flex cursor-grab items-center justify-center w-7 h-7 rounded border border-white/15 text-white/40 select-none" title="Potiahni pre zmenu poradia" aria-hidden="true">⋮⋮</span>
+				<span class="video-pos text-white/40">{ strconv.Itoa(pos) }</span>
+			</span>
 		</td>
-		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ date }</td>
-		<td class="py-3 pr-4 text-white/70">{ duration }</td>
+		<td class="py-3 pr-4">
+			<span class="block font-semibold text-white">{ v.Title }</span>
+			<span class="block text-xs text-white/40">{ v.YoutubeID }</span>
+		</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ videos.ShortDate(v.PublishedDate) }</td>
+		<td class="py-3 pr-4 text-white/70">{ v.Duration }</td>
 		<td class="py-3">
 			<div class="flex justify-end gap-2">
-				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">↑</button>
-				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">↓</button>
-				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+				<button type="button" class="admin-btn-row cursor-pointer" hx-get={ videoURL(v.ID, "/edit") } hx-target="closest tr" hx-swap="outerHTML">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger cursor-pointer" hx-delete={ videoURL(v.ID, "") } hx-target="closest tr" hx-swap="delete" hx-confirm="Naozaj zmazať klip?">Zmazať</button>
 			</div>
 		</td>
 	</tr>
+}
+
+templ AdminVideoEditRow(v db.Video, errMsg string) {
+	<tr class="border-t border-amber-400/40 bg-amber-400/[0.04]" data-id={ strconv.FormatInt(v.ID, 10) }>
+		<td colspan="5" class="px-4 py-4">
+			if errMsg != "" {
+				<p role="alert" class="mb-3 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			<form hx-put={ videoURL(v.ID, "") } hx-target="closest tr" hx-swap="outerHTML" class="grid gap-3 sm:grid-cols-2">
+				<div class="sm:col-span-2">
+					<label class="admin-label" for={ "edit-url-" + strconv.FormatInt(v.ID, 10) }>YouTube URL alebo ID</label>
+					<input id={ "edit-url-" + strconv.FormatInt(v.ID, 10) } name="youtube_url" type="text" required maxlength="200" value={ v.YoutubeID } class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2">
+					<label class="admin-label" for={ "edit-title-" + strconv.FormatInt(v.ID, 10) }>Názov</label>
+					<input id={ "edit-title-" + strconv.FormatInt(v.ID, 10) } name="title" type="text" required maxlength="200" value={ v.Title } class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for={ "edit-date-" + strconv.FormatInt(v.ID, 10) }>Dátum publikovania</label>
+					<input id={ "edit-date-" + strconv.FormatInt(v.ID, 10) } name="published_date" type="date" required value={ v.PublishedDate } class="admin-input"/>
+				</div>
+				<div>
+					<label class="admin-label" for={ "edit-duration-" + strconv.FormatInt(v.ID, 10) }>Dĺžka (M:SS)</label>
+					<input id={ "edit-duration-" + strconv.FormatInt(v.ID, 10) } name="duration" type="text" required pattern="[0-9]{1,3}:[0-5][0-9]" value={ v.Duration } class="admin-input"/>
+				</div>
+				<div class="sm:col-span-2 flex gap-2">
+					<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+					<button type="button" class="admin-btn-row cursor-pointer" hx-get={ videoURL(v.ID, "") } hx-target="closest tr" hx-swap="outerHTML">Zrušiť</button>
+				</div>
+			</form>
+		</td>
+	</tr>
+}
+
+templ AdminVideosScripts() {
+	<script>
+		(function videoReorderInit() {
+			function csrfToken() {
+				const m = document.querySelector('meta[name="csrf-token"]');
+				return m ? m.content : '';
+			}
+			function rowIDs(tbody) {
+				return Array.from(tbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
+			}
+			function renumber(tbody) {
+				Array.from(tbody.querySelectorAll('tr[data-id]')).forEach((tr, i) => {
+					const num = tr.querySelector('.video-pos');
+					if (num) {
+						num.textContent = String(i + 1);
+					}
+				});
+			}
+			function markDragging(tr) {
+				if (tr) {
+					tr.style.opacity = '0.4';
+				}
+			}
+			function unmarkDragging(tr) {
+				if (tr) {
+					tr.style.opacity = '';
+				}
+			}
+			let saveTimer = null;
+			function saveOrder(tbody) {
+				if (saveTimer) {
+					clearTimeout(saveTimer);
+				}
+				saveTimer = setTimeout(() => {
+					const params = new URLSearchParams();
+					rowIDs(tbody).forEach(id => params.append('id', id));
+					fetch('/admin/videos/reorder', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							'X-CSRF-Token': csrfToken(),
+							'HX-Request': 'true',
+						},
+						body: params.toString(),
+					}).then(async (resp) => {
+						const html = await resp.text();
+						const list = document.getElementById('video-list');
+						if (resp.ok && list && html.includes('video-list-body')) {
+							list.innerHTML = html;
+							bindVideoReorder();
+							if (window.htmx) {
+								window.htmx.process(list);
+							}
+						}
+						const trigger = resp.headers.get('HX-Trigger');
+						if (trigger) {
+							try {
+								const payload = JSON.parse(trigger);
+								const msg = payload && payload.showToast;
+								if (msg && window.adminToast) {
+									window.adminToast(msg);
+								}
+							} catch (e) {}
+						}
+					}).catch(() => {
+						if (window.adminToast) {
+							window.adminToast('Poradie sa nepodarilo uložiť.');
+						}
+					});
+				}, 400);
+			}
+			let dragRow = null;
+			function onDragStart(e) {
+				const tr = e.target.closest('tr[data-id]');
+				if (!tr) {
+					return;
+				}
+				// Whole row is draggable (grab anywhere); the ⋮⋮ grip
+				// is a visual hint. Clicks on buttons still work as clicks.
+				dragRow = tr;
+				markDragging(tr);
+				e.dataTransfer.effectAllowed = 'move';
+				try {
+					e.dataTransfer.setData('text/plain', tr.dataset.id);
+				} catch (err) {}
+			}
+			function onDragOver(e) {
+				if (!dragRow) {
+					return;
+				}
+				e.preventDefault();
+				const over = e.target.closest('tr[data-id]');
+				if (!over || over === dragRow) {
+					return;
+				}
+				const tbody = over.parentNode;
+				const rect = over.getBoundingClientRect();
+				const after = (e.clientY - rect.top) > rect.height / 2;
+				if (after) {
+					tbody.insertBefore(dragRow, over.nextSibling);
+				} else {
+					tbody.insertBefore(dragRow, over);
+				}
+				renumber(tbody);
+			}
+			function onDrop(e) {
+				if (!dragRow) {
+					return;
+				}
+				e.preventDefault();
+				const tbody = dragRow.parentNode;
+				unmarkDragging(dragRow);
+				dragRow = null;
+				renumber(tbody);
+				saveOrder(tbody);
+			}
+			function onDragEnd() {
+				if (!dragRow) {
+					return;
+				}
+				const tbody = dragRow.parentNode;
+				unmarkDragging(dragRow);
+				dragRow = null;
+				renumber(tbody);
+				saveOrder(tbody);
+			}
+			function bindVideoReorder() {
+				const tbody = document.getElementById('video-list-body');
+				if (!tbody || tbody.dataset.bound === '1') {
+					return;
+				}
+				tbody.dataset.bound = '1';
+				tbody.addEventListener('dragstart', onDragStart);
+				tbody.addEventListener('dragover', onDragOver);
+				tbody.addEventListener('drop', onDrop);
+				tbody.addEventListener('dragend', onDragEnd);
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', bindVideoReorder);
+			} else {
+				bindVideoReorder();
+			}
+			document.body.addEventListener('htmx:afterSwap', bindVideoReorder);
+		})();
+	</script>
+}
+
+func videoURL(id int64, suffix string) string {
+	return "/admin/videos/" + strconv.FormatInt(id, 10) + suffix
 }

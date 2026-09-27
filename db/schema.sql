@@ -27,3 +27,15 @@ CREATE TABLE concerts (
 );
 
 CREATE INDEX idx_concerts_event_date ON concerts(event_date);
+
+CREATE TABLE videos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  youtube_id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  published_date TEXT NOT NULL CHECK (published_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  duration TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_videos_position ON videos(position, id);

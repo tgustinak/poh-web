@@ -3,6 +3,7 @@ package templates
 import (
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/videos"
 )
 
 // HomeData is the view model for the public home page,
@@ -10,6 +11,7 @@ import (
 // the Home template signature.
 type HomeData struct {
 	Concerts ConcertsData
+	Videos   []videos.Video
 }
 
 // ConcertsData is the view model for the concerts section.
@@ -21,9 +23,10 @@ type ConcertsData struct {
 }
 
 // NewHomeData assembles the home page view model from section view models.
-func NewHomeData(concerts ConcertsData) HomeData {
+func NewHomeData(concerts ConcertsData, videoRows []db.Video) HomeData {
 	return HomeData{
 		Concerts: concerts,
+		Videos:   videos.FromDBMany(videoRows),
 	}
 }
 

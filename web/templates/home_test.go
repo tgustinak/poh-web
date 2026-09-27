@@ -34,13 +34,13 @@ func TestNewHomeData(t *testing.T) {
 		[]db.Concert{{Name: "Minulý", EventDate: "2025-05-01"}},
 	)
 
-	home := NewHomeData(section)
+	home := NewHomeData(section, nil)
 
 	if len(home.Concerts.Upcoming) != 1 || home.Concerts.PastCount != 1 {
 		t.Fatalf("expected section passthrough, got %+v", home.Concerts)
 	}
 
-	empty := NewHomeData(NewConcertsData(nil, nil))
+	empty := NewHomeData(NewConcertsData(nil, nil), nil)
 	if len(empty.Concerts.Upcoming) != 0 || empty.Concerts.PastCount != 0 {
 		t.Fatalf("expected empty home data, got %+v", empty.Concerts)
 	}

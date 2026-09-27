@@ -26,6 +26,7 @@ type Deps struct {
 	AuthHandler     *admin.AuthHandler
 	LogsHandler     *admin.LogsHandler
 	ConcertsHandler *admin.ConcertsHandler
+	VideosHandler   *admin.VideosHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -58,10 +59,17 @@ func NewMux(deps Deps) http.Handler {
 			return
 		}
 
+		clipRows, err := deps.Queries.ListVideosOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 
 		renderTemplate(templates.Home(
-			templates.NewHomeData(templates.NewConcertsData(upcoming, past)),
+			templates.NewHomeData(templates.NewConcertsData(upcoming, past), clipRows),
 		), w, r)
 	})
 
@@ -115,8 +123,15 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/videos", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminVideos(csrf(r)), w, r)
+		deps.VideosHandler.ListPage(w, r)
 	}))
+
+	mux.HandleFunc("POST /admin/videos", protected(deps.Auth, deps.VideosHandler.Create))
+	mux.HandleFunc("POST /admin/videos/reorder", protected(deps.Auth, deps.VideosHandler.Reorder))
+	mux.HandleFunc("GET /admin/videos/{id}", protected(deps.Auth, deps.VideosHandler.Row))
+	mux.HandleFunc("GET /admin/videos/{id}/edit", protected(deps.Auth, deps.VideosHandler.EditForm))
+	mux.HandleFunc("PUT /admin/videos/{id}", protected(deps.Auth, deps.VideosHandler.Update))
+	mux.HandleFunc("DELETE /admin/videos/{id}", protected(deps.Auth, deps.VideosHandler.Delete))
 
 	mux.HandleFunc("GET /admin/about", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
