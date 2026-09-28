@@ -23,6 +23,16 @@ type Concert struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Contact struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Role      string    `json:"role"`
+	Phone     string    `json:"phone"`
+	Email     string    `json:"email"`
+	PhotoPath string    `json:"photo_path"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Session struct {
 	TokenHash string    `json:"token_hash"`
 	UserID    int64     `json:"user_id"`

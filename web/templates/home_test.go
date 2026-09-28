@@ -3,6 +3,7 @@ package templates
 import (
 	"testing"
 
+	"github.com/tgustinak/pohkapela.sk/internal/contact"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 )
 
@@ -34,8 +35,9 @@ func TestNewHomeData(t *testing.T) {
 		Past:     []db.Concert{{Name: "Minulý", EventDate: "2025-05-01"}},
 	})
 	aboutRow := db.About{P1: "p1", P2: "p2", Quote: "q"}
+	contactData := contact.Contact{Name: "Kontakt", Phone: "+421900123456", Email: "k@example.sk"}
 
-	home := NewHomeData(HomeParams{Concerts: section, Videos: nil, About: aboutRow})
+	home := NewHomeData(HomeParams{Concerts: section, Videos: nil, About: aboutRow, Contact: contactData})
 
 	if len(home.Concerts.Upcoming) != 1 || home.Concerts.PastCount != 1 {
 		t.Fatalf("expected section passthrough, got %+v", home.Concerts)
@@ -43,6 +45,10 @@ func TestNewHomeData(t *testing.T) {
 
 	if home.About.P1 != "p1" || home.About.P2 != "p2" || home.About.Quote != "q" {
 		t.Fatalf("expected about passthrough, got %+v", home.About)
+	}
+
+	if home.Contact.Name != "Kontakt" || home.Contact.Phone != "+421900123456" {
+		t.Fatalf("expected contact passthrough, got %+v", home.Contact)
 	}
 
 	empty := NewHomeData(HomeParams{Concerts: NewConcertsData(ConcertsParams{}), About: db.About{}})

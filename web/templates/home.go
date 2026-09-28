@@ -3,6 +3,7 @@ package templates
 import (
 	"github.com/tgustinak/pohkapela.sk/internal/about"
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
+	"github.com/tgustinak/pohkapela.sk/internal/contact"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
 )
@@ -14,6 +15,7 @@ type HomeData struct {
 	Concerts ConcertsData
 	Videos   []videos.Video
 	About    about.About
+	Contact  contact.Contact
 }
 
 // ConcertsData is the view model for the concerts section.
@@ -31,6 +33,9 @@ type HomeParams struct {
 	Concerts ConcertsData
 	Videos   []db.Video
 	About    db.About
+	// Contact is already resolved by admin.ContactHandler.GetContact,
+	// which falls back to no photo when the file is missing on disk.
+	Contact contact.Contact
 }
 
 // NewHomeData assembles the home page view model from section view models.
@@ -39,6 +44,7 @@ func NewHomeData(p HomeParams) HomeData {
 		Concerts: p.Concerts,
 		Videos:   videos.FromDBMany(p.Videos),
 		About:    about.FromDB(p.About),
+		Contact:  p.Contact,
 	}
 }
 

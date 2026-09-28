@@ -1,37 +1,496 @@
 package templates
 
-templ AdminContact(csrf string) {
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/contact"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+)
+
+templ AdminContact(data contact.Contact, csrf string, errMsg string) {
 	@AdminLayout("Kontakt", "contact", csrf) {
 		@AdminPageHeader("Kontakt", "Manažérka a kontaktné údaje v sekcii Kontakt")
 		<div class="admin-card">
-			<form data-demo class="grid gap-4 sm:grid-cols-2">
-				<div class="sm:col-span-2 flex items-center gap-5">
-					<img src="/static/images/manager.webp" alt="Aktuálna fotka" class="w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
-					<div>
-						<label class="admin-label" for="contact-photo">Nová fotka</label>
-						<input id="contact-photo" type="file" accept="image/*" class="admin-input"/>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div class="sm:col-span-2 flex flex-wrap items-center gap-5">
+					if data.PhotoPath != "" {
+						<img id="contact-photo-img" src={ data.PhotoPath } alt="Aktuálna fotka" class="w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
+					} else {
+						<img id="contact-photo-img" src="" alt="Aktuálna fotka" class="hidden w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
+					}
+					if data.PhotoPath != "" {
+						<div id="contact-photo-silhouette" class="hidden w-20 h-20 rounded-full ring-2 ring-amber-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
+							<svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"></path>
+							</svg>
+						</div>
+					} else {
+						<div id="contact-photo-silhouette" class="w-20 h-20 rounded-full ring-2 ring-amber-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
+							<svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"></path>
+							</svg>
+						</div>
+					}
+					<div class="min-w-0">
+						<label class="admin-label" for="contact-photo-input">Fotka</label>
+						<input id="contact-photo-input" type="file" accept="image/*" class="admin-input"/>
+						<p class="mt-1 text-xs text-white/40">Štvorec 1:1 — po výbere fotku orežeš a vycentruješ. Bez fotky sa zobrazí silueta.</p>
+						<p id="contact-photo-error" role="alert" class="hidden mt-1 text-sm font-semibold text-red-300"></p>
+						if data.PhotoPath != "" {
+							<button id="contact-photo-delete" type="button" class="mt-2 text-xs font-semibold text-red-300/80 transition hover:text-red-300 cursor-pointer">Zmazať fotku</button>
+						} else {
+							<button id="contact-photo-delete" type="button" class="hidden mt-2 text-xs font-semibold text-red-300/80 transition hover:text-red-300 cursor-pointer">Zmazať fotku</button>
+						}
 					</div>
 				</div>
-				<div>
-					<label class="admin-label" for="contact-name">Meno</label>
-					<input id="contact-name" type="text" value="Jana Testová" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="contact-role">Pozícia</label>
-					<input id="contact-role" type="text" value="Manažérka" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="contact-phone">Telefón</label>
-					<input id="contact-phone" type="tel" value="+421 900 123 456" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="contact-email">E-mail</label>
-					<input id="contact-email" type="email" value="kontakt@example.com" class="admin-input"/>
-				</div>
-				<div class="sm:col-span-2">
-					<button type="submit" class="admin-btn">Uložiť zmeny</button>
-				</div>
-			</form>
+			</div>
+			<div class="mt-6">
+				@AdminContactForm(data, errMsg)
+			</div>
 		</div>
+		<div id="contact-crop-modal" class="hidden fixed inset-0 z-[70] items-center justify-center bg-black/80 p-4">
+			<div class="w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl">
+				<h2 class="text-lg font-bold text-white">Orezať fotku</h2>
+				<p class="mt-1 text-xs text-white/50">Ťahaním fotku posunieš, kolieskom alebo sliderom priblížiš. Uloží sa štvorec 800 × 800.</p>
+				<div class="mt-4 flex flex-col sm:flex-row items-center gap-5">
+					<canvas id="contact-crop-canvas" width="360" height="360" class="w-full max-w-[360px] aspect-square rounded-xl bg-black/60 cursor-grab touch-none"></canvas>
+					<div class="flex flex-col items-center gap-2">
+						<canvas id="contact-crop-preview" width="144" height="144" class="w-24 h-24 rounded-full object-cover ring-2 ring-amber-400/60"></canvas>
+						<span class="text-xs text-white/40">Náhľad</span>
+					</div>
+				</div>
+				<label class="admin-label mt-4" for="contact-crop-zoom">Priblíženie</label>
+				<input id="contact-crop-zoom" type="range" min="1" max="4" step="0.01" value="1" class="w-full accent-amber-400"/>
+				<p id="contact-crop-error" role="alert" class="hidden mt-2 text-sm font-semibold text-red-300"></p>
+				<div class="mt-4 flex justify-end gap-3">
+					<button id="contact-crop-cancel" type="button" class="admin-nav-item cursor-pointer">Zrušiť</button>
+					<button id="contact-crop-apply" type="button" class="admin-btn cursor-pointer">Použiť výrez</button>
+				</div>
+			</div>
+		</div>
+		@scripts.Defer("contact-cropper", ContactCropperScripts())
 	}
+}
+
+templ AdminContactForm(data contact.Contact, errMsg string) {
+	<form id="contact-form" method="POST" action="/admin/contact" hx-put="/admin/contact" hx-target="#contact-form" hx-swap="outerHTML" class="grid gap-4 sm:grid-cols-2" novalidate>
+		if errMsg != "" {
+			<p role="alert" class="sm:col-span-2 text-sm font-semibold text-red-300">{ errMsg }</p>
+		}
+		<div>
+			<label class="admin-label" for="contact-name">Meno</label>
+			<input id="contact-name" name="name" type="text" value={ data.Name } required maxlength="100" autocomplete="off" class="admin-input"/>
+			<p id="contact-name-error" role="alert" class="hidden mt-1 text-sm font-semibold text-red-300"></p>
+		</div>
+		<div>
+			<label class="admin-label" for="contact-role">Pozícia</label>
+			<input id="contact-role" name="role" type="text" value={ data.Role } required maxlength="100" autocomplete="off" class="admin-input"/>
+			<p id="contact-role-error" role="alert" class="hidden mt-1 text-sm font-semibold text-red-300"></p>
+		</div>
+		<div>
+			<label class="admin-label" for="contact-phone">Telefón</label>
+			<input id="contact-phone" name="phone" type="tel" value={ contact.DisplayPhone(data.Phone) } required autocomplete="tel" placeholder="+421 900 123 456" class="admin-input"/>
+			<p id="contact-phone-error" role="alert" class="hidden mt-1 text-sm font-semibold text-red-300"></p>
+		</div>
+		<div>
+			<label class="admin-label" for="contact-email">E-mail</label>
+			<input id="contact-email" name="email" type="email" value={ data.Email } required maxlength="254" autocomplete="email" class="admin-input"/>
+			<p id="contact-email-error" role="alert" class="hidden mt-1 text-sm font-semibold text-red-300"></p>
+		</div>
+		<div class="sm:col-span-2">
+			<button type="submit" class="admin-btn">Uložiť zmeny</button>
+		</div>
+	</form>
+}
+
+templ ContactCropperScripts() {
+	<script>
+		(function contactCropperInit() {
+			function csrfToken() {
+				const m = document.querySelector('meta[name="csrf-token"]');
+				return m ? m.content : '';
+			}
+			function showError(id, msg) {
+				const el = document.getElementById(id);
+				if (!el) {
+					return;
+				}
+				if (!msg) {
+					el.textContent = '';
+					el.classList.add('hidden');
+					return;
+				}
+				el.textContent = msg;
+				el.classList.remove('hidden');
+			}
+			function normalizePhone(s) {
+				const t = (s || '').trim();
+				if (!t) {
+					return null;
+				}
+				let digits = '';
+				let hasPlus = false;
+				for (const ch of t) {
+					if (ch >= '0' && ch <= '9') {
+						digits += ch;
+					} else if (ch === '+' && digits === '') {
+						hasPlus = true;
+					} else if (ch === ' ' || ch === '-' || ch === '.' || ch === '/' || ch === '(' || ch === ')') {
+						continue;
+					} else {
+						return null;
+					}
+				}
+				if (!digits) {
+					return null;
+				}
+				if (digits.startsWith('00')) {
+					digits = digits.slice(2);
+					hasPlus = true;
+				}
+				if (!hasPlus) {
+					if (digits.length === 10 && digits.startsWith('09')) {
+						digits = '421' + digits.slice(1);
+					} else {
+						return null;
+					}
+				}
+				if (digits.length < 9 || digits.length > 15) {
+					return null;
+				}
+				if (digits.startsWith('421') && digits.length !== 12) {
+					return null;
+				}
+				return '+' + digits;
+			}
+			function validEmail(s) {
+				const t = (s || '').trim().toLowerCase();
+				if (!t || t.length > 254 || t.includes(' ')) {
+					return null;
+				}
+				const at = t.lastIndexOf('@');
+				if (at <= 0 || at >= t.length - 1) {
+					return null;
+				}
+				const domain = t.slice(at + 1);
+				if (!domain.includes('.') || domain.startsWith('.') || domain.endsWith('.')) {
+					return null;
+				}
+				if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(t)) {
+					return null;
+				}
+				return t;
+			}
+			function validateField(inputId, errorId, validator, emptyMsg, invalidMsg) {
+				const input = document.getElementById(inputId);
+				if (!input) {
+					return true;
+				}
+				const raw = input.value;
+				if (!raw.trim()) {
+					showError(errorId, emptyMsg);
+					return false;
+				}
+				if (inputId === 'contact-name' || inputId === 'contact-role') {
+					if ([...raw.trim()].length > 100) {
+						showError(errorId, invalidMsg);
+						return false;
+					}
+					showError(errorId, '');
+					return true;
+				}
+				if (!validator(raw)) {
+					showError(errorId, invalidMsg);
+					return false;
+				}
+				showError(errorId, '');
+				return true;
+			}
+			function validateContactForm() {
+				const nameOk = validateField('contact-name', 'contact-name-error', null, 'Vyplň meno.', 'Meno je príliš dlhé (max 100 znakov).');
+				const roleOk = validateField('contact-role', 'contact-role-error', null, 'Vyplň pozíciu.', 'Pozícia je príliš dlhá (max 100 znakov).');
+				const phoneOk = validateField('contact-phone', 'contact-phone-error', normalizePhone, 'Vyplň telefón.', 'Telefónne číslo nie je platné – skús napr. +421 900 123 456.');
+				const emailOk = validateField('contact-email', 'contact-email-error', validEmail, 'Vyplň e-mail.', 'E-mail nie je platný – skontroluj preklep.');
+				return nameOk && roleOk && phoneOk && emailOk;
+			}
+			document.addEventListener('submit', (e) => {
+				const form = e.target;
+				if (!form || form.id !== 'contact-form') {
+					return;
+				}
+				if (!validateContactForm()) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
+			}, true);
+			document.addEventListener('input', (e) => {
+				const t = e.target;
+				if (!t || !t.id || !t.id.startsWith('contact-')) {
+					return;
+				}
+				if (t.id === 'contact-photo-input') {
+					return;
+				}
+				validateContactForm();
+			});
+
+			const fileInput = document.getElementById('contact-photo-input');
+			const modal = document.getElementById('contact-crop-modal');
+			const canvas = document.getElementById('contact-crop-canvas');
+			const preview = document.getElementById('contact-crop-preview');
+			const zoom = document.getElementById('contact-crop-zoom');
+			const applyBtn = document.getElementById('contact-crop-apply');
+			const cancelBtn = document.getElementById('contact-crop-cancel');
+			if (!fileInput || !modal || !canvas || !preview || !zoom || !applyBtn || !cancelBtn) {
+				return;
+			}
+			const ctx = canvas.getContext('2d');
+			const previewCtx = preview.getContext('2d');
+			const size = canvas.width;
+			let img = null;
+			let imgW = 0;
+			let imgH = 0;
+			let scale = 1;
+			let minScale = 1;
+			let offX = 0;
+			let offY = 0;
+			let dragging = false;
+			let lastX = 0;
+			let lastY = 0;
+			let objectUrl = '';
+
+			function clampOffsets() {
+				const w = imgW * scale;
+				const h = imgH * scale;
+				if (w <= size) {
+					offX = (size - w) / 2;
+				} else {
+					offX = Math.min(0, Math.max(size - w, offX));
+				}
+				if (h <= size) {
+					offY = (size - h) / 2;
+				} else {
+					offY = Math.min(0, Math.max(size - h, offY));
+				}
+			}
+			function draw() {
+				if (!img) {
+					return;
+				}
+				clampOffsets();
+				ctx.clearRect(0, 0, size, size);
+				ctx.drawImage(img, offX, offY, imgW * scale, imgH * scale);
+				const ps = preview.width;
+				previewCtx.clearRect(0, 0, ps, ps);
+				previewCtx.drawImage(canvas, 0, 0, size, size, 0, 0, ps, ps);
+			}
+			function setScale(next, cx, cy) {
+				const px = cx === undefined ? size / 2 : cx;
+				const py = cy === undefined ? size / 2 : cy;
+				const clamped = Math.min(minScale * 4, Math.max(minScale, next));
+				const k = clamped / scale;
+				offX = px - (px - offX) * k;
+				offY = py - (py - offY) * k;
+				scale = clamped;
+				zoom.value = String(scale / minScale);
+				draw();
+			}
+			function openModal() {
+				modal.classList.remove('hidden');
+				modal.classList.add('flex');
+			}
+			function closeModal() {
+				modal.classList.add('hidden');
+				modal.classList.remove('flex');
+				fileInput.value = '';
+				if (objectUrl) {
+					URL.revokeObjectURL(objectUrl);
+					objectUrl = '';
+				}
+				img = null;
+				showError('contact-crop-error', '');
+			}
+			fileInput.addEventListener('change', () => {
+				showError('contact-photo-error', '');
+				const file = fileInput.files && fileInput.files[0];
+				if (!file) {
+					return;
+				}
+				if (!file.type.startsWith('image/')) {
+					showError('contact-photo-error', 'Vyber obrázok (JPG, PNG alebo WebP).');
+					fileInput.value = '';
+					return;
+				}
+				if (objectUrl) {
+					URL.revokeObjectURL(objectUrl);
+				}
+				objectUrl = URL.createObjectURL(file);
+				const loaded = new Image();
+				loaded.onload = () => {
+					img = loaded;
+					imgW = loaded.naturalWidth;
+					imgH = loaded.naturalHeight;
+					minScale = Math.max(size / imgW, size / imgH);
+					scale = minScale;
+					offX = (size - imgW * scale) / 2;
+					offY = (size - imgH * scale) / 2;
+					zoom.value = '1';
+					draw();
+					openModal();
+				};
+				loaded.onerror = () => {
+					showError('contact-photo-error', 'Obrázok sa nepodarilo načítať.');
+					fileInput.value = '';
+				};
+				loaded.src = objectUrl;
+			});
+			canvas.addEventListener('pointerdown', (e) => {
+				dragging = true;
+				lastX = e.clientX;
+				lastY = e.clientY;
+				canvas.setPointerCapture(e.pointerId);
+				canvas.style.cursor = 'grabbing';
+			});
+			canvas.addEventListener('pointermove', (e) => {
+				if (!dragging) {
+					return;
+				}
+				const rect = canvas.getBoundingClientRect();
+				const kx = size / rect.width;
+				offX += (e.clientX - lastX) * kx;
+				offY += (e.clientY - lastY) * kx;
+				lastX = e.clientX;
+				lastY = e.clientY;
+				draw();
+			});
+			function endDrag() {
+				dragging = false;
+				canvas.style.cursor = 'grab';
+			}
+			canvas.addEventListener('pointerup', endDrag);
+			canvas.addEventListener('pointercancel', endDrag);
+			canvas.addEventListener('wheel', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const cx = (e.clientX - rect.left) * (size / rect.width);
+				const cy = (e.clientY - rect.top) * (size / rect.height);
+				setScale(scale * (e.deltaY < 0 ? 1.1 : 0.9), cx, cy);
+			}, { passive: false });
+			zoom.addEventListener('input', () => {
+				setScale(minScale * parseFloat(zoom.value || '1'));
+			});
+			cancelBtn.addEventListener('click', closeModal);
+			modal.addEventListener('click', (e) => {
+				if (e.target === modal) {
+					closeModal();
+				}
+			});
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+					closeModal();
+				}
+			});
+			applyBtn.addEventListener('click', () => {
+				if (!img) {
+					return;
+				}
+				showError('contact-crop-error', '');
+				applyBtn.disabled = true;
+				const out = document.createElement('canvas');
+				out.width = 800;
+				out.height = 800;
+				const octx = out.getContext('2d');
+				const k = 800 / size;
+				octx.drawImage(img, offX * k, offY * k, imgW * scale * k, imgH * scale * k);
+				out.toBlob(async (blob) => {
+					applyBtn.disabled = false;
+					if (!blob) {
+						showError('contact-crop-error', 'Výrez sa nepodarilo vytvoriť.');
+						return;
+					}
+					const fd = new FormData();
+					fd.append('photo', blob, 'manager.webp');
+					let resp;
+					try {
+						resp = await fetch('/admin/contact/photo', {
+							method: 'PUT',
+							headers: {
+								'X-CSRF-Token': csrfToken(),
+								'Accept': 'application/json',
+								'HX-Request': 'true',
+							},
+							body: fd,
+						});
+					} catch (err) {
+						showError('contact-crop-error', 'Nahrávanie zlyhalo, skús to znova.');
+						return;
+					}
+					const data = await resp.json().catch(() => ({}));
+					if (!resp.ok) {
+						showError('contact-crop-error', data.error || 'Fotku sa nepodarilo uložiť.');
+						return;
+					}
+					if (!data.photoUrl) {
+						showError('contact-crop-error', 'Fotku sa nepodarilo uložiť.');
+						return;
+					}
+					const previewImg = document.getElementById('contact-photo-img');
+					const silhouette = document.getElementById('contact-photo-silhouette');
+					const delBtn = document.getElementById('contact-photo-delete');
+					if (previewImg) {
+						previewImg.src = data.photoUrl;
+						previewImg.classList.remove('hidden');
+					}
+					if (silhouette) {
+						silhouette.classList.add('hidden');
+						silhouette.classList.remove('flex');
+					}
+					if (delBtn) {
+						delBtn.classList.remove('hidden');
+					}
+					closeModal();
+					adminToast(data.message || 'Fotka uložená.');
+				}, 'image/webp', 0.85);
+			});
+
+			const delBtn = document.getElementById('contact-photo-delete');
+			if (delBtn) {
+				delBtn.addEventListener('click', async () => {
+					if (!confirm('Naozaj zmazať fotku? Namiesto nej sa zobrazí silueta.')) {
+						return;
+					}
+					showError('contact-photo-error', '');
+					let resp;
+					try {
+						resp = await fetch('/admin/contact/photo', {
+							method: 'DELETE',
+							headers: {
+								'X-CSRF-Token': csrfToken(),
+								'Accept': 'application/json',
+								'HX-Request': 'true',
+							},
+						});
+					} catch (err) {
+						showError('contact-photo-error', 'Mazanie zlyhalo, skús to znova.');
+						return;
+					}
+					const data = await resp.json().catch(() => ({}));
+					if (!resp.ok) {
+						showError('contact-photo-error', data.error || 'Fotku sa nepodarilo zmazať.');
+						return;
+					}
+					const previewImg = document.getElementById('contact-photo-img');
+					const silhouette = document.getElementById('contact-photo-silhouette');
+					if (previewImg) {
+						previewImg.removeAttribute('src');
+						previewImg.classList.add('hidden');
+					}
+					if (silhouette) {
+						silhouette.classList.remove('hidden');
+						silhouette.classList.add('flex');
+					}
+					delBtn.classList.add('hidden');
+					adminToast(data.message || 'Fotka zmazaná.');
+				});
+			}
+		})();
+	</script>
 }

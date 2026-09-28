@@ -23,11 +23,13 @@ import (
 type Deps struct {
 	Auth            *auth.Service
 	Queries         *db.Queries
+	UploadDir       string
 	AuthHandler     *admin.AuthHandler
 	LogsHandler     *admin.LogsHandler
 	ConcertsHandler *admin.ConcertsHandler
 	VideosHandler   *admin.VideosHandler
 	AboutHandler    *admin.AboutHandler
+	ContactHandler  *admin.ContactHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -41,6 +43,13 @@ func NewMux(deps Deps) http.Handler {
 			"/static/",
 			http.FileServer(http.Dir(staticDir())),
 		),
+	)
+
+	// Uploaded files (contact photo, ...) carry a content hash in their
+	// file names, so every new upload is a fresh immutable URL.
+	mux.Handle(
+		"/uploads/",
+		http.StripPrefix("/uploads/", immutableFileServer(deps.UploadDir)),
 	)
 
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +83,13 @@ func NewMux(deps Deps) http.Handler {
 			return
 		}
 
+		contactData, err := deps.ContactHandler.GetContact(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 
 		renderTemplate(templates.Home(
@@ -82,8 +98,9 @@ func NewMux(deps Deps) http.Handler {
 					Upcoming: upcoming,
 					Past:     past,
 				}),
-				Videos: clipRows,
-				About:  aboutRow,
+				Videos:  clipRows,
+				About:   aboutRow,
+				Contact: contactData,
 			}),
 		), w, r)
 	})
@@ -165,8 +182,12 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/contact", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminContact(csrf(r)), w, r)
+		deps.ContactHandler.EditPage(w, r)
 	}))
+
+	mux.HandleFunc("PUT /admin/contact", protected(deps.Auth, deps.ContactHandler.Update))
+	mux.HandleFunc("PUT /admin/contact/photo", protected(deps.Auth, deps.ContactHandler.UploadPhoto))
+	mux.HandleFunc("DELETE /admin/contact/photo", protected(deps.Auth, deps.ContactHandler.DeletePhoto))
 
 	mux.HandleFunc("GET /admin/organizers", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -219,6 +240,18 @@ func staticDir() string {
 	_, file, _, _ := runtime.Caller(0)
 
 	return filepath.Join(filepath.Dir(file), "..", "..", "web", "static")
+}
+
+// immutableFileServer serves uploaded files with a long immutable cache
+// lifetime. Upload file names embed a content hash, so a changed file is
+// always a new URL and browsers never need to revalidate.
+func immutableFileServer(dir string) http.Handler {
+	fs := http.FileServer(http.Dir(dir))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		fs.ServeHTTP(w, r)
+	})
 }
 
 func renderTemplate(t templ.Component, w http.ResponseWriter, r *http.Request) {

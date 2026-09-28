@@ -16,6 +16,7 @@ import (
 type Config struct {
 	Port                        string
 	DatabasePath                string
+	UploadDir                   string
 	AdminEmail                  string
 	AdminPassword               string
 	LogLevel                    string
@@ -29,6 +30,7 @@ func Load() Config {
 	return Config{
 		Port:                        getenv("PORT", ":8080"),
 		DatabasePath:                getenv("DATABASE_PATH", "./data/app.db"),
+		UploadDir:                   getenv("UPLOAD_DIR", "./data/uploads"),
 		AdminEmail:                  os.Getenv("ADMIN_EMAIL"),
 		AdminPassword:               os.Getenv("ADMIN_PASSWORD"),
 		LogLevel:                    getenv("LOG_LEVEL", "info"),
@@ -58,6 +60,10 @@ func (c Config) Validate() error {
 
 	if c.DatabasePath == "" {
 		return fmt.Errorf("DATABASE_PATH must not be empty")
+	}
+
+	if c.UploadDir == "" {
+		return fmt.Errorf("UPLOAD_DIR must not be empty")
 	}
 
 	if _, err := ParseLogLevel(c.LogLevel); err != nil {

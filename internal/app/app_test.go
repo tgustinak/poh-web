@@ -12,6 +12,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,8 +33,8 @@ const (
 )
 
 // testServer boots the full app mux with a fresh database
-// and returns the server plus its log buffer.
-func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
+// and returns the server, its log buffer and the uploads directory.
+func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer, string) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -60,20 +61,24 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 
 	logs := logbuffer.New(10)
 
+	uploadDir := t.TempDir()
+
 	mux := app.NewMux(app.Deps{
 		Auth:            authSvc,
 		Queries:         queries,
+		UploadDir:       uploadDir,
 		AuthHandler:     admin.NewAuthHandler(authSvc),
 		LogsHandler:     admin.NewLogsHandler(logs),
 		ConcertsHandler: admin.NewConcertsHandler(queries),
 		VideosHandler:   admin.NewVideosHandler(queries),
 		AboutHandler:    admin.NewAboutHandler(queries),
+		ContactHandler:  admin.NewContactHandler(queries, uploadDir),
 	})
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
-	return server, logs
+	return server, logs, uploadDir
 }
 
 // testClient returns an HTTP client that stores cookies
@@ -236,7 +241,7 @@ func assertRedirect(t *testing.T, resp *http.Response, target string) {
 // login page -> failed login -> successful login -> protected page ->
 // logout -> protected page denied again.
 func TestAdminLoginFlow(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/")
@@ -304,7 +309,7 @@ func TestAdminLoginFlow(t *testing.T) {
 // TestAdminLoginFlowHtmx covers the htmx login flow end to end:
 // toast trigger on failure, HX-Redirect on success and logout.
 func TestAdminLoginFlowHtmx(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, "wrong", true)
@@ -369,7 +374,7 @@ func TestAdminLoginFlowHtmx(t *testing.T) {
 }
 
 func TestLogoutWithoutCsrfRejected(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
@@ -392,7 +397,7 @@ func TestLogoutWithoutCsrfRejected(t *testing.T) {
 }
 
 func TestAdminLogsPage(t *testing.T) {
-	server, logs := testServer(t)
+	server, logs, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/admin/logs")
@@ -427,7 +432,7 @@ func TestAdminLogsPage(t *testing.T) {
 }
 
 func TestAdminLogsEntriesPagination(t *testing.T) {
-	server, logs := testServer(t)
+	server, logs, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
@@ -501,7 +506,7 @@ func entriesCursor(t *testing.T, body string) string {
 }
 
 func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/")
@@ -531,7 +536,7 @@ func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
 }
 
 func TestCookieConsentBanner(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	for path, name := range map[string]string{"/": "home", "/pre-organizatorov": "organizers"} {
@@ -564,7 +569,7 @@ func TestCookieConsentBanner(t *testing.T) {
 }
 
 func TestMediaEmbedsGatedBehindConsent(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/")
@@ -594,7 +599,7 @@ func TestMediaEmbedsGatedBehindConsent(t *testing.T) {
 // login -> create upcoming and past concerts -> both visible
 // appropriately on the web -> delete -> gone everywhere.
 func TestAdminConcertsFlow(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
@@ -686,7 +691,7 @@ func TestAdminConcertsFlow(t *testing.T) {
 // TestHomeShowsSeededClips verifies the public clips section is DB-driven:
 // seeded videos from the migration render on the home page.
 func TestHomeShowsSeededClips(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/")
@@ -706,7 +711,7 @@ func TestHomeShowsSeededClips(t *testing.T) {
 // login -> admin list shows seed -> create clip -> visible on web ->
 // reorder -> delete -> gone everywhere.
 func TestAdminVideosFlow(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
@@ -836,7 +841,7 @@ func scrapeConcertID(t *testing.T, body string) string {
 // TestHomeShowsSeededAbout verifies the public about section is DB-driven:
 // the seeded text from the migration renders on the home page.
 func TestHomeShowsSeededAbout(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp, err := client.Get(server.URL + "/")
@@ -856,7 +861,7 @@ func TestHomeShowsSeededAbout(t *testing.T) {
 // login -> admin form shows seed -> invalid update rejected ->
 // valid htmx update visible on web and in admin -> plain update redirects.
 func TestAdminAboutFlow(t *testing.T) {
-	server, _ := testServer(t)
+	server, _, _ := testServer(t)
 	client := testClient(t)
 
 	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
@@ -950,5 +955,140 @@ func TestAdminAboutFlow(t *testing.T) {
 
 	if body := readBody(t, resp); !strings.Contains(body, "Plain odstavec jedna") {
 		t.Fatal("expected plain update to persist on home page")
+	}
+}
+
+// TestAdminContactFlow covers contact editing end to end:
+// login -> admin form shows seed -> invalid update rejected ->
+// valid htmx update visible on web.
+func TestAdminContactFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/contact")
+	if err != nil {
+		t.Fatalf("get admin contact: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected contact 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, `hx-put="/admin/contact"`) {
+		t.Fatal("expected contact form to use htmx")
+	}
+
+	putContact := func(name, phone, email string) *http.Response {
+		t.Helper()
+
+		csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+		form := url.Values{"name": {name}, "role": {"Manažérka"}, "phone": {phone}, "email": {email}}
+
+		req, err := http.NewRequest(http.MethodPut, server.URL+"/admin/contact", strings.NewReader(form.Encode()))
+		if err != nil {
+			t.Fatalf("create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("HX-Request", "true")
+		req.Header.Set(auth.CsrfHeaderName, csrf)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("put contact: %v", err)
+		}
+
+		return resp
+	}
+
+	resp = putContact("E2E Manažérka", "0907", "kontakt@example.com")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected htmx validation 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Telefónne číslo nie je platné") {
+		t.Fatalf("expected inline phone error, got %q", body)
+	}
+
+	resp = putContact("E2E Manažérka", "+421 907 111 222", "e2e@example.com")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected update 200, got %d", resp.StatusCode)
+	}
+
+	if trigger := resp.Header.Get("HX-Trigger"); !strings.Contains(trigger, "showToast") {
+		t.Fatalf("expected toast trigger, got %q", trigger)
+	}
+	resp.Body.Close()
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E Manažérka") {
+		t.Fatal("expected updated contact to appear on home page")
+	}
+}
+
+// TestUploadsServeImmutable verifies uploaded files are served with a long
+// immutable cache lifetime (file names carry a content hash) and that
+// missing files 404.
+func TestUploadsServeImmutable(t *testing.T) {
+	server, _, uploadDir := testServer(t)
+	client := testClient(t)
+
+	name := "manager-0123456789abcdef.webp"
+	content := []byte("fake-webp-content")
+
+	if err := os.WriteFile(filepath.Join(uploadDir, name), content, 0o644); err != nil {
+		t.Fatalf("seed upload: %v", err)
+	}
+
+	resp, err := client.Get(server.URL + "/uploads/" + name)
+	if err != nil {
+		t.Fatalf("get upload: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected upload 200, got %d", resp.StatusCode)
+	}
+
+	if cc := resp.Header.Get("Cache-Control"); !strings.Contains(cc, "immutable") {
+		t.Fatalf("expected immutable cache header, got %q", cc)
+	}
+
+	if body := readBody(t, resp); body != string(content) {
+		t.Fatalf("expected upload body, got %q", body)
+	}
+
+	resp, err = client.Get(server.URL + "/uploads/manager-0000000000000000.webp")
+	if err != nil {
+		t.Fatalf("get missing upload: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected missing upload 404, got %d", resp.StatusCode)
+	}
+}
+
+// TestHomeShowsSeededContact verifies the public contact section is
+// DB-driven: the seeded manager from the migration renders on the home page.
+func TestHomeShowsSeededContact(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{"Jana Testová", "kontakt@example.com", "+421 900 123 456"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
 	}
 }
