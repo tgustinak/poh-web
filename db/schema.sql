@@ -39,3 +39,11 @@ CREATE TABLE videos (
 );
 
 CREATE INDEX idx_videos_position ON videos(position, id);
+
+CREATE TABLE about (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  p1 TEXT NOT NULL,
+  p2 TEXT NOT NULL,
+  quote TEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

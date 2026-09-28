@@ -27,6 +27,7 @@ type Deps struct {
 	LogsHandler     *admin.LogsHandler
 	ConcertsHandler *admin.ConcertsHandler
 	VideosHandler   *admin.VideosHandler
+	AboutHandler    *admin.AboutHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -66,10 +67,24 @@ func NewMux(deps Deps) http.Handler {
 			return
 		}
 
+		aboutRow, err := deps.Queries.GetAbout(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 
 		renderTemplate(templates.Home(
-			templates.NewHomeData(templates.NewConcertsData(upcoming, past), clipRows),
+			templates.NewHomeData(templates.HomeParams{
+				Concerts: templates.NewConcertsData(templates.ConcertsParams{
+					Upcoming: upcoming,
+					Past:     past,
+				}),
+				Videos: clipRows,
+				About:  aboutRow,
+			}),
 		), w, r)
 	})
 
@@ -136,8 +151,10 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/about", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminAbout(csrf(r)), w, r)
+		deps.AboutHandler.EditPage(w, r)
 	}))
+
+	mux.HandleFunc("PUT /admin/about", protected(deps.Auth, deps.AboutHandler.Update))
 
 	mux.HandleFunc("GET /admin/social", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

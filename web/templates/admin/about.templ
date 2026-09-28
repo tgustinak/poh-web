@@ -1,26 +1,37 @@
 package templates
 
-templ AdminAbout(csrf string) {
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/about"
+)
+
+templ AdminAbout(data about.About, csrf string, errMsg string) {
 	@AdminLayout("O nás", "about", csrf) {
 		@AdminPageHeader("O nás", "Text sekcie O nás na webe")
 		<div class="admin-card">
-			<form data-demo class="flex flex-col gap-4">
-				<div>
-					<label class="admin-label" for="about-p1">Odstavec 1</label>
-					<textarea id="about-p1" rows="6" class="admin-input">P.O.H je slovenská folk-rocková kapela, ktorá pochádza z Dolného Kubína a ktorej vznik nebol okamihom, ale procesom, takže jeho presné datovanie nie je uchopiteľné; pár rokov to však už bude… V zložení dve gitary, basgitara a bicie si prešla mnohými koncertmi, či už na klubových pódiách alebo menších i väčších festivaloch v SR a ČR.</textarea>
-				</div>
-				<div>
-					<label class="admin-label" for="about-p2">Odstavec 2</label>
-					<textarea id="about-p2" rows="6" class="admin-input">Na konte má štyri demo albumy: Posledný smiech, Stodola, Deň za dňom, Večnosť a jeden štúdiový Na konci sveta (2021). Hrá výsostne vlastnú produkciu a všetky jej texty sú v rodnej slovenčine, čo je pre kapelu úplne prirodzené a poslucháčmi (súdiac podľa ich ohlasov) oceňované.</textarea>
-				</div>
-				<div>
-					<label class="admin-label" for="about-quote">Citát</label>
-					<textarea id="about-quote" rows="2" class="admin-input">Obojstranný prúd energie na koncertoch je pre P.O.H na nezaplatenie – kto to zažil, ten vie…</textarea>
-				</div>
-				<div>
-					<button type="submit" class="admin-btn">Uložiť zmeny</button>
-				</div>
-			</form>
+			@AdminAboutForm(data, errMsg)
 		</div>
 	}
+}
+
+templ AdminAboutForm(data about.About, errMsg string) {
+	<form id="about-form" method="POST" action="/admin/about" hx-put="/admin/about" hx-target="#about-form" hx-swap="outerHTML" class="flex flex-col gap-4">
+		if errMsg != "" {
+			<p role="alert" class="text-sm font-semibold text-red-300">{ errMsg }</p>
+		}
+		<div>
+			<label class="admin-label" for="about-p1">Odstavec 1</label>
+			<textarea id="about-p1" name="p1" rows="6" required maxlength="2000" class="admin-input">{ data.P1 }</textarea>
+		</div>
+		<div>
+			<label class="admin-label" for="about-p2">Odstavec 2</label>
+			<textarea id="about-p2" name="p2" rows="6" required maxlength="2000" class="admin-input">{ data.P2 }</textarea>
+		</div>
+		<div>
+			<label class="admin-label" for="about-quote">Citát</label>
+			<textarea id="about-quote" name="quote" rows="2" required maxlength="500" class="admin-input">{ data.Quote }</textarea>
+		</div>
+		<div>
+			<button type="submit" class="admin-btn">Uložiť zmeny</button>
+		</div>
+	</form>
 }

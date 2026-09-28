@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+type About struct {
+	ID        int64     `json:"id"`
+	P1        string    `json:"p1"`
+	P2        string    `json:"p2"`
+	Quote     string    `json:"quote"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Concert struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`

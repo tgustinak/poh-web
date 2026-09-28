@@ -67,6 +67,7 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer) {
 		LogsHandler:     admin.NewLogsHandler(logs),
 		ConcertsHandler: admin.NewConcertsHandler(queries),
 		VideosHandler:   admin.NewVideosHandler(queries),
+		AboutHandler:    admin.NewAboutHandler(queries),
 	})
 
 	server := httptest.NewServer(mux)
@@ -830,4 +831,124 @@ func scrapeConcertID(t *testing.T, body string) string {
 	}
 
 	return rest[:end]
+}
+
+// TestHomeShowsSeededAbout verifies the public about section is DB-driven:
+// the seeded text from the migration renders on the home page.
+func TestHomeShowsSeededAbout(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{"Dolného Kubína", "Na konci sveta", "kto to zažil, ten vie"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
+	}
+}
+
+// TestAdminAboutFlow covers about editing end to end:
+// login -> admin form shows seed -> invalid update rejected ->
+// valid htmx update visible on web and in admin -> plain update redirects.
+func TestAdminAboutFlow(t *testing.T) {
+	server, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/about")
+	if err != nil {
+		t.Fatalf("get admin about: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected about 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, `hx-put="/admin/about"`) {
+		t.Fatal("expected about form to use htmx")
+	}
+
+	putAbout := func(p1, p2, quote string, useHtmx bool) *http.Response {
+		t.Helper()
+
+		csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+		form := url.Values{"p1": {p1}, "p2": {p2}, "quote": {quote}}
+
+		var req *http.Request
+		var err error
+		if useHtmx {
+			req, err = http.NewRequest(http.MethodPut, server.URL+"/admin/about", strings.NewReader(form.Encode()))
+			if err != nil {
+				t.Fatalf("create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("HX-Request", "true")
+			req.Header.Set(auth.CsrfHeaderName, csrf)
+		} else {
+			form.Set("csrf_token", csrf)
+			req, err = http.NewRequest(http.MethodPut, server.URL+"/admin/about", strings.NewReader(form.Encode()))
+			if err != nil {
+				t.Fatalf("create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("put about: %v", err)
+		}
+
+		return resp
+	}
+
+	// Empty paragraph must be rejected with an inline error for htmx.
+	resp = putAbout("", "Druhý", "Citát", true)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected htmx validation 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Vyplň prvý odstavec.") {
+		t.Fatalf("expected inline validation error, got %q", body)
+	}
+
+	// Valid htmx update returns the form plus a toast.
+	resp = putAbout("E2E odstavec jedna", "E2E odstavec dva", "E2E citát", true)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected update 200, got %d", resp.StatusCode)
+	}
+
+	if trigger := resp.Header.Get("HX-Trigger"); !strings.Contains(trigger, "showToast") {
+		t.Fatalf("expected toast trigger, got %q", trigger)
+	}
+	resp.Body.Close()
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E odstavec jedna") {
+		t.Fatal("expected updated about to appear on home page")
+	}
+
+	// Plain (no-JS) update redirects back to the edit page.
+	resp = putAbout("Plain odstavec jedna", "Plain odstavec dva", "Plain citát", false)
+	resp.Body.Close()
+	assertRedirect(t, resp, "/admin/about")
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after plain update: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Plain odstavec jedna") {
+		t.Fatal("expected plain update to persist on home page")
+	}
 }

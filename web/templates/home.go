@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"github.com/tgustinak/pohkapela.sk/internal/about"
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
@@ -12,6 +13,7 @@ import (
 type HomeData struct {
 	Concerts ConcertsData
 	Videos   []videos.Video
+	About    about.About
 }
 
 // ConcertsData is the view model for the concerts section.
@@ -22,20 +24,37 @@ type ConcertsData struct {
 	PastCount int
 }
 
+// HomeParams carries the inputs for NewHomeData as named fields,
+// so callers cannot swap sections and new sections do not change
+// the function signature.
+type HomeParams struct {
+	Concerts ConcertsData
+	Videos   []db.Video
+	About    db.About
+}
+
 // NewHomeData assembles the home page view model from section view models.
-func NewHomeData(concerts ConcertsData, videoRows []db.Video) HomeData {
+func NewHomeData(p HomeParams) HomeData {
 	return HomeData{
-		Concerts: concerts,
-		Videos:   videos.FromDBMany(videoRows),
+		Concerts: p.Concerts,
+		Videos:   videos.FromDBMany(p.Videos),
+		About:    about.FromDB(p.About),
 	}
+}
+
+// ConcertsParams carries the inputs for NewConcertsData as named fields,
+// so upcoming and past rows cannot be swapped by mistake.
+type ConcertsParams struct {
+	Upcoming []db.Concert
+	Past     []db.Concert
 }
 
 // NewConcertsData assembles the concerts section view model
 // from database rows.
-func NewConcertsData(upcomingRows, pastRows []db.Concert) ConcertsData {
+func NewConcertsData(p ConcertsParams) ConcertsData {
 	return ConcertsData{
-		Upcoming:  concerts.FromDBMany(upcomingRows),
-		Past:      concerts.GroupPastByYear(pastRows),
-		PastCount: len(pastRows),
+		Upcoming:  concerts.FromDBMany(p.Upcoming),
+		Past:      concerts.GroupPastByYear(p.Past),
+		PastCount: len(p.Past),
 	}
 }

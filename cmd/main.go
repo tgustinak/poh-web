@@ -68,6 +68,7 @@ func main() {
 		LogsHandler:     admin.NewLogsHandler(logs),
 		ConcertsHandler: admin.NewConcertsHandler(queries),
 		VideosHandler:   admin.NewVideosHandler(queries),
+		AboutHandler:    admin.NewAboutHandler(queries),
 	}))
 
 	srv.Start()
