@@ -1,6 +1,10 @@
 package templates
 
-templ Social() {
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/social"
+)
+
+templ Social(links []social.Link) {
 	<section id="social" class="bg-black border-t border-white/5">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
 			<div class="text-center">
@@ -11,12 +15,9 @@ templ Social() {
 				</p>
 			</div>
 			<div class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				@SocialCard("facebook", "Facebook", "kapelaPOH", "https://www.facebook.com/kapelaPOH/", "Sledovať")
-				@SocialCard("instagram", "Instagram", "@kapela_p.o.h", "https://www.instagram.com/kapela_p.o.h/", "Sledovať")
-				@SocialCard("youtube", "YouTube", "@p.o.h6377", "https://www.youtube.com/@p.o.h6377", "Odoberať")
-				@SocialCard("spotify", "Spotify", "P.O.H", "https://open.spotify.com/artist/79t3KrQngTRDooegKsR4cw", "Sledovať")
-				@SocialCard("ytmusic", "YouTube Music", "P.O.H", "https://music.youtube.com/channel/UCWK7N2Ir9r8YuyMXScgs0dw", "Počúvať")
-				@SocialCard("apple", "Apple Music", "P.O.H", "https://music.apple.com/us/artist/p-o-h/6788148500", "Počúvať")
+				for _, l := range links {
+					@SocialCard(l.Platform, l.DisplayName, l.Handle, l.URL, l.CTA)
+				}
 			</div>
 		</div>
 	</section>

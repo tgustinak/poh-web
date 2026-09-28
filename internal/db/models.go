@@ -41,6 +41,15 @@ type Session struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SocialLink struct {
+	Platform    string    `json:"platform"`
+	DisplayName string    `json:"display_name"`
+	Handle      string    `json:"handle"`
+	Url         string    `json:"url"`
+	Position    int64     `json:"position"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type User struct {
 	ID           int64     `json:"id"`
 	Email        string    `json:"email"`

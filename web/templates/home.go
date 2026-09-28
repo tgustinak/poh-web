@@ -5,6 +5,7 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/contact"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/social"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
 )
 
@@ -15,6 +16,7 @@ type HomeData struct {
 	Concerts ConcertsData
 	Videos   []videos.Video
 	About    about.About
+	Social   []social.Link
 	Contact  contact.Contact
 }
 
@@ -33,6 +35,7 @@ type HomeParams struct {
 	Concerts ConcertsData
 	Videos   []db.Video
 	About    db.About
+	Social   []db.SocialLink
 	// Contact is already resolved by admin.ContactHandler.GetContact,
 	// which falls back to no photo when the file is missing on disk.
 	Contact contact.Contact
@@ -44,6 +47,7 @@ func NewHomeData(p HomeParams) HomeData {
 		Concerts: p.Concerts,
 		Videos:   videos.FromDBMany(p.Videos),
 		About:    about.FromDB(p.About),
+		Social:   social.FromDBMany(p.Social),
 		Contact:  p.Contact,
 	}
 }

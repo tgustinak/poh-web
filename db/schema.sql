@@ -57,3 +57,12 @@ CREATE TABLE contact (
   photo_path TEXT NOT NULL DEFAULT '',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE social_links (
+  platform TEXT PRIMARY KEY CHECK (platform IN ('facebook', 'instagram', 'youtube', 'spotify', 'ytmusic', 'apple')),
+  display_name TEXT NOT NULL,
+  handle TEXT NOT NULL,
+  url TEXT NOT NULL CHECK (url LIKE 'https://%'),
+  position INTEGER NOT NULL UNIQUE,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

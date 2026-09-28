@@ -72,6 +72,7 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer, string) {
 		ConcertsHandler: admin.NewConcertsHandler(queries),
 		VideosHandler:   admin.NewVideosHandler(queries),
 		AboutHandler:    admin.NewAboutHandler(queries),
+		SocialHandler:   admin.NewSocialHandler(queries),
 		ContactHandler:  admin.NewContactHandler(queries, uploadDir),
 	})
 
@@ -1090,5 +1091,130 @@ func TestHomeShowsSeededContact(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected home to contain %q", want)
 		}
+	}
+}
+
+// TestHomeShowsSeededSocial verifies the public social section is DB-driven:
+// the seeded links from the migration render on the home page.
+func TestHomeShowsSeededSocial(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{
+		"kapelaPOH",
+		"https://www.facebook.com/kapelaPOH/",
+		"https://open.spotify.com/artist/79t3KrQngTRDooegKsR4cw",
+		"Odoberať",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
+	}
+}
+
+// TestAdminSocialFlow covers social editing end to end:
+// login -> admin list shows seed -> invalid update rejected ->
+// valid htmx update visible on web and in admin -> plain update redirects.
+func TestAdminSocialFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/social")
+	if err != nil {
+		t.Fatalf("get admin social: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected social 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, `hx-get="/admin/social/facebook/edit"`) {
+		t.Fatal("expected social rows to use htmx inline editing")
+	}
+
+	putSocial := func(platform, handle, linkURL string, useHtmx bool) *http.Response {
+		t.Helper()
+
+		csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+		form := url.Values{"handle": {handle}, "url": {linkURL}}
+
+		var req *http.Request
+		var err error
+		if useHtmx {
+			req, err = http.NewRequest(http.MethodPut, server.URL+"/admin/social/"+platform, strings.NewReader(form.Encode()))
+			if err != nil {
+				t.Fatalf("create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("HX-Request", "true")
+			req.Header.Set(auth.CsrfHeaderName, csrf)
+		} else {
+			form.Set("csrf_token", csrf)
+			req, err = http.NewRequest(http.MethodPut, server.URL+"/admin/social/"+platform, strings.NewReader(form.Encode()))
+			if err != nil {
+				t.Fatalf("create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("put social: %v", err)
+		}
+
+		return resp
+	}
+
+	// Invalid URL must be rejected with an inline error for htmx.
+	resp = putSocial("facebook", "kapelaPOH", "http://example.com/x", true)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected htmx validation 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "URL musí začínať https://") {
+		t.Fatalf("expected inline URL error, got %q", body)
+	}
+
+	// Valid htmx update returns the row plus a toast.
+	resp = putSocial("facebook", "E2E handle", "https://www.facebook.com/e2e/", true)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected update 200, got %d", resp.StatusCode)
+	}
+
+	if trigger := resp.Header.Get("HX-Trigger"); !strings.Contains(trigger, "showToast") {
+		t.Fatalf("expected toast trigger, got %q", trigger)
+	}
+	resp.Body.Close()
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E handle") {
+		t.Fatal("expected updated social to appear on home page")
+	}
+
+	// Plain (no-JS) update redirects back to the list.
+	resp = putSocial("facebook", "Plain handle", "https://www.facebook.com/plain/", false)
+	resp.Body.Close()
+	assertRedirect(t, resp, "/admin/social")
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after plain update: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Plain handle") {
+		t.Fatal("expected plain update to persist on home page")
 	}
 }

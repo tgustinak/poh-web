@@ -70,6 +70,7 @@ func main() {
 		ConcertsHandler: admin.NewConcertsHandler(queries),
 		VideosHandler:   admin.NewVideosHandler(queries),
 		AboutHandler:    admin.NewAboutHandler(queries),
+		SocialHandler:   admin.NewSocialHandler(queries),
 		ContactHandler:  admin.NewContactHandler(queries, cfg.UploadDir),
 	}))
 

@@ -29,6 +29,7 @@ type Deps struct {
 	ConcertsHandler *admin.ConcertsHandler
 	VideosHandler   *admin.VideosHandler
 	AboutHandler    *admin.AboutHandler
+	SocialHandler   *admin.SocialHandler
 	ContactHandler  *admin.ContactHandler
 }
 
@@ -83,6 +84,13 @@ func NewMux(deps Deps) http.Handler {
 			return
 		}
 
+		socialRows, err := deps.Queries.ListSocialLinksOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		contactData, err := deps.ContactHandler.GetContact(r.Context())
 		if err != nil {
 			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
@@ -100,6 +108,7 @@ func NewMux(deps Deps) http.Handler {
 				}),
 				Videos:  clipRows,
 				About:   aboutRow,
+				Social:  socialRows,
 				Contact: contactData,
 			}),
 		), w, r)
@@ -176,8 +185,12 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/social", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminSocial(csrf(r)), w, r)
+		deps.SocialHandler.ListPage(w, r)
 	}))
+
+	mux.HandleFunc("GET /admin/social/{platform}", protected(deps.Auth, deps.SocialHandler.Row))
+	mux.HandleFunc("GET /admin/social/{platform}/edit", protected(deps.Auth, deps.SocialHandler.EditForm))
+	mux.HandleFunc("PUT /admin/social/{platform}", protected(deps.Auth, deps.SocialHandler.Update))
 
 	mux.HandleFunc("GET /admin/contact", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
