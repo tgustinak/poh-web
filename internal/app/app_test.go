@@ -5,9 +5,11 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -64,16 +66,17 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer, string) {
 	uploadDir := t.TempDir()
 
 	mux := app.NewMux(app.Deps{
-		Auth:            authSvc,
-		Queries:         queries,
-		UploadDir:       uploadDir,
-		AuthHandler:     admin.NewAuthHandler(authSvc),
-		LogsHandler:     admin.NewLogsHandler(logs),
-		ConcertsHandler: admin.NewConcertsHandler(queries),
-		VideosHandler:   admin.NewVideosHandler(queries),
-		AboutHandler:    admin.NewAboutHandler(queries),
-		SocialHandler:   admin.NewSocialHandler(queries),
-		ContactHandler:  admin.NewContactHandler(queries, uploadDir),
+		Auth:              authSvc,
+		Queries:           queries,
+		UploadDir:         uploadDir,
+		AuthHandler:       admin.NewAuthHandler(authSvc),
+		LogsHandler:       admin.NewLogsHandler(logs),
+		ConcertsHandler:   admin.NewConcertsHandler(queries),
+		VideosHandler:     admin.NewVideosHandler(queries),
+		AboutHandler:      admin.NewAboutHandler(queries),
+		SocialHandler:     admin.NewSocialHandler(queries),
+		OrganizersHandler: admin.NewOrganizersHandler(queries, uploadDir),
+		ContactHandler:    admin.NewContactHandler(queries, uploadDir),
 	})
 
 	server := httptest.NewServer(mux)
@@ -1217,4 +1220,304 @@ func TestAdminSocialFlow(t *testing.T) {
 	if body := readBody(t, resp); !strings.Contains(body, "Plain handle") {
 		t.Fatal("expected plain update to persist on home page")
 	}
+}
+
+// TestOrganizersPageShowsSeed verifies the organizers page is DB-driven:
+// seeded documents, photos and the shared contact card render.
+func TestOrganizersPageShowsSeed(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/pre-organizatorov")
+	if err != nil {
+		t.Fatalf("get organizers: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected organizers 200, got %d", resp.StatusCode)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{
+		"Pre organizátorov",
+		"Jana Testová",
+		"kontakt@example.com",
+		"+421 900 123 456",
+		"Technický rider",
+		"/static/files/poh-rider.pdf",
+		"poh-promo-1.png",
+		"promo-1-preview",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected organizers page to contain %q", want)
+		}
+	}
+}
+
+// TestOrganizersContactSync verifies the organizers contact card follows
+// the shared contact section: an update in /admin/contact appears on
+// /pre-organizatorov without a second edit.
+func TestOrganizersContactSync(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+	form := url.Values{
+		"name":  {"E2E Organizátori"},
+		"role":  {"Manažérka"},
+		"phone": {"+421 907 111 222"},
+		"email": {"e2e@example.com"},
+	}
+
+	req, err := http.NewRequest(http.MethodPut, server.URL+"/admin/contact", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set(auth.CsrfHeaderName, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("put contact: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected contact update 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/pre-organizatorov")
+	if err != nil {
+		t.Fatalf("get organizers: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E Organizátori") {
+		t.Fatal("expected organizers page to follow shared contact")
+	}
+}
+
+// organizerTestFile is one multipart file field for organizer uploads.
+type organizerTestFile struct {
+	filename string
+	content  []byte
+}
+
+// organizersMultipart builds a multipart htmx file-upload request.
+func organizersMultipart(
+	t *testing.T,
+	method, target string,
+	files map[string]organizerTestFile,
+	values url.Values,
+	csrf string,
+) *http.Request {
+	t.Helper()
+
+	var buf bytes.Buffer
+
+	w := multipart.NewWriter(&buf)
+
+	for field, f := range files {
+		part, err := w.CreateFormFile(field, f.filename)
+		if err != nil {
+			t.Fatalf("create form file: %v", err)
+		}
+
+		if _, err := part.Write(f.content); err != nil {
+			t.Fatalf("write part: %v", err)
+		}
+	}
+
+	for key, vals := range values {
+		for _, v := range vals {
+			if err := w.WriteField(key, v); err != nil {
+				t.Fatalf("write field: %v", err)
+			}
+		}
+	}
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+
+	req, err := http.NewRequest(method, target, &buf)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set(auth.CsrfHeaderName, csrf)
+
+	return req
+}
+
+// TestAdminOrganizersDocumentsFlow covers document replacement end to end:
+// login -> admin list shows seed -> non-PDF rejected ->
+// valid htmx replacement visible on the public page.
+func TestAdminOrganizersDocumentsFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/organizers")
+	if err != nil {
+		t.Fatalf("get admin organizers: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected organizers 200, got %d", resp.StatusCode)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, `hx-put="/admin/organizers/documents/rider"`) {
+		t.Fatal("expected document replace forms to use htmx")
+	}
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+
+	jpeg, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "files", "poh-promo-2.jpg"))
+	if err != nil {
+		t.Fatalf("read seed photo: %v", err)
+	}
+
+	// Non-PDF must be rejected with an inline error.
+	req := organizersMultipart(t, http.MethodPut, server.URL+"/admin/organizers/documents/rider",
+		map[string]organizerTestFile{"file": {"foto.jpg", jpeg}}, nil, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("put document: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "Dokument musí byť PDF.") {
+		t.Fatalf("expected inline PDF error, got %q", body)
+	}
+
+	// Valid replacement returns the row plus a toast.
+	req = organizersMultipart(t, http.MethodPut, server.URL+"/admin/organizers/documents/rider",
+		map[string]organizerTestFile{"file": {"rider.pdf", []byte("%PDF-1.4 E2E rider\n")}}, nil, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("put document: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected replace 200, got %d", resp.StatusCode)
+	}
+
+	if trigger := resp.Header.Get("HX-Trigger"); !strings.Contains(trigger, "showToast") {
+		t.Fatalf("expected toast trigger, got %q", trigger)
+	}
+	resp.Body.Close()
+
+	resp, err = client.Get(server.URL + "/pre-organizatorov")
+	if err != nil {
+		t.Fatalf("get organizers: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "/uploads/organizatori-rider-") {
+		t.Fatal("expected replaced document to appear on organizers page")
+	}
+}
+
+// TestAdminOrganizersPhotosFlow covers promo photo management end to end:
+// login -> create photo -> visible on web -> delete -> gone everywhere.
+func TestAdminOrganizersPhotosFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+
+	jpeg, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "files", "poh-promo-2.jpg"))
+	if err != nil {
+		t.Fatalf("read seed photo: %v", err)
+	}
+
+	req := organizersMultipart(t, http.MethodPost, server.URL+"/admin/organizers/photos",
+		map[string]organizerTestFile{"photo": {"e2e.jpg", jpeg}}, url.Values{"alt": {"E2E promo"}}, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post photo: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected create 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/pre-organizatorov")
+	if err != nil {
+		t.Fatalf("get organizers: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E promo") {
+		t.Fatal("expected new photo to appear on organizers page")
+	}
+
+	resp, err = client.Get(server.URL + "/admin/organizers")
+	if err != nil {
+		t.Fatalf("get admin organizers: %v", err)
+	}
+
+	id := scrapePhotoID(t, readBody(t, resp), "E2E promo")
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, server.URL+"/admin/organizers/photos/"+id, nil)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	deleteReq.Header.Set("HX-Request", "true")
+	deleteReq.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete photo: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/pre-organizatorov")
+	if err != nil {
+		t.Fatalf("get organizers after delete: %v", err)
+	}
+
+	if body := readBody(t, resp); strings.Contains(body, "E2E promo") {
+		t.Fatal("expected deleted photo to disappear from organizers page")
+	}
+}
+
+func scrapePhotoID(t *testing.T, body, alt string) string {
+	t.Helper()
+
+	anchor := strings.Index(body, alt)
+	if anchor < 0 {
+		t.Fatalf("expected photo %q in admin list", alt)
+	}
+
+	const prefix = `hx-delete="/admin/organizers/photos/`
+	idx := strings.Index(body[anchor:], prefix)
+	if idx < 0 {
+		t.Fatalf("expected delete button for %q", alt)
+	}
+
+	rest := body[anchor+idx+len(prefix):]
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+	if end <= 0 {
+		t.Fatalf("expected numeric photo id, got %q", body)
+	}
+
+	return rest[:end]
 }

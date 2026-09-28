@@ -62,16 +62,17 @@ func main() {
 	})
 
 	srv.Mount("/", app.NewMux(app.Deps{
-		Auth:            authSvc,
-		Queries:         queries,
-		UploadDir:       cfg.UploadDir,
-		AuthHandler:     admin.NewAuthHandler(authSvc),
-		LogsHandler:     admin.NewLogsHandler(logs),
-		ConcertsHandler: admin.NewConcertsHandler(queries),
-		VideosHandler:   admin.NewVideosHandler(queries),
-		AboutHandler:    admin.NewAboutHandler(queries),
-		SocialHandler:   admin.NewSocialHandler(queries),
-		ContactHandler:  admin.NewContactHandler(queries, cfg.UploadDir),
+		Auth:              authSvc,
+		Queries:           queries,
+		UploadDir:         cfg.UploadDir,
+		AuthHandler:       admin.NewAuthHandler(authSvc),
+		LogsHandler:       admin.NewLogsHandler(logs),
+		ConcertsHandler:   admin.NewConcertsHandler(queries),
+		VideosHandler:     admin.NewVideosHandler(queries),
+		AboutHandler:      admin.NewAboutHandler(queries),
+		SocialHandler:     admin.NewSocialHandler(queries),
+		OrganizersHandler: admin.NewOrganizersHandler(queries, cfg.UploadDir),
+		ContactHandler:    admin.NewContactHandler(queries, cfg.UploadDir),
 	}))
 
 	srv.Start()

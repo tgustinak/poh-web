@@ -66,3 +66,22 @@ CREATE TABLE social_links (
   position INTEGER NOT NULL UNIQUE,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE organizer_documents (
+  slot TEXT PRIMARY KEY CHECK (slot IN ('rider', 'input-list', 'logo')),
+  display_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  position INTEGER NOT NULL UNIQUE,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE organizer_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT NOT NULL,
+  preview_path TEXT NOT NULL,
+  alt TEXT NOT NULL DEFAULT '',
+  meta_label TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

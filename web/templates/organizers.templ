@@ -1,6 +1,11 @@
 package templates
 
-templ Organizers() {
+import (
+	"github.com/tgustinak/pohkapela.sk/internal/contact"
+	"github.com/tgustinak/pohkapela.sk/internal/organizers"
+)
+
+templ Organizers(c contact.Contact, docs []organizers.Document, photos []organizers.Photo) {
 	@Base("P.O.H – Pre organizátorov") {
 		<header class="border-b border-white/10 bg-black">
 			<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -22,22 +27,31 @@ templ Organizers() {
 					</p>
 				</div>
 				<div class="mt-12 max-w-4xl rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5">
-					<img
-						src="/static/images/manager.webp"
-						alt="Jana Testová – manažérka kapely P.O.H"
-						class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"
-						loading="lazy"
-					/>
+					if c.PhotoPath != "" {
+						<img
+							src={ c.PhotoPath }
+							alt={ c.Name + " – " + c.Role + " kapely P.O.H" }
+							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"
+							loading="lazy"
+						/>
+					} else {
+						<img
+							src="/static/images/manager.webp"
+							alt={ c.Name + " – " + c.Role + " kapely P.O.H" }
+							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"
+							loading="lazy"
+						/>
+					}
 					<div class="min-w-0 flex-1">
-						<p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/90">Manažérka • booking</p>
-						<p class="mt-1 text-lg font-bold text-white">Jana Testová</p>
+						<p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/90">{ c.Role } • booking</p>
+						<p class="mt-1 text-lg font-bold text-white">{ c.Name }</p>
 					</div>
 					<div class="flex flex-wrap gap-3">
-						<a href="tel:+421900123456" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
-							+421 900 123 456
+						<a href={ "tel:" + c.Phone } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
+							{ contact.DisplayPhone(c.Phone) }
 						</a>
-						<a href="mailto:kontakt@example.com" class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
-							kontakt@example.com
+						<a href={ "mailto:" + c.Email } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
+							{ c.Email }
 						</a>
 					</div>
 				</div>
@@ -45,13 +59,14 @@ templ Organizers() {
 					<p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Na stiahnutie</p>
 					<h2 class="mt-3 text-3xl font-bold tracking-wide text-white/90">Materiály na stiahnutie</h2>
 					<div class="mt-8 flex flex-col gap-3">
-						@DownloadRow("/static/files/poh-rider.pdf", "Technický rider", "PDF • 120 kB")
-						@DownloadRow("/static/files/poh-input-list.pdf", "Input list", "PDF • 2,8 MB")
-						@DownloadRow("/static/files/poh-logo.pdf", "Logo v krivkách", "PDF • 408 kB")
+						for _, d := range docs {
+							@DownloadRow(d.FilePath, d.DisplayName, d.Meta)
+						}
 					</div>
 					<div class="mt-6 grid gap-6 sm:grid-cols-2">
-						@PhotoCard("/static/images/promo-1-preview.webp", "/static/files/poh-promo-1.png", "Kapela P.O.H – promo foto 1", "PNG • 2105 × 2560")
-						@PhotoCard("/static/images/promo-2-preview.webp", "/static/files/poh-promo-2.jpg", "Kapela P.O.H – promo foto 2", "JPG • 2560 × 2560")
+						for _, p := range photos {
+							@PhotoCard(p.PreviewPath, p.FilePath, organizers.PhotoAlt(p), p.MetaLabel)
+						}
 					</div>
 				</div>
 			</div>

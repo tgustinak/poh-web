@@ -33,6 +33,25 @@ type Contact struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type OrganizerDocument struct {
+	Slot        string    `json:"slot"`
+	DisplayName string    `json:"display_name"`
+	FilePath    string    `json:"file_path"`
+	SizeBytes   int64     `json:"size_bytes"`
+	Position    int64     `json:"position"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type OrganizerPhoto struct {
+	ID          int64     `json:"id"`
+	FilePath    string    `json:"file_path"`
+	PreviewPath string    `json:"preview_path"`
+	Alt         string    `json:"alt"`
+	MetaLabel   string    `json:"meta_label"`
+	Position    int64     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Session struct {
 	TokenHash string    `json:"token_hash"`
 	UserID    int64     `json:"user_id"`

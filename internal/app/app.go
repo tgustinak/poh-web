@@ -13,6 +13,7 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/organizers"
 	"github.com/tgustinak/pohkapela.sk/internal/scripts"
 	"github.com/tgustinak/pohkapela.sk/internal/server"
 	"github.com/tgustinak/pohkapela.sk/web/templates"
@@ -21,16 +22,17 @@ import (
 
 // Deps are the dependencies needed to build the application handler.
 type Deps struct {
-	Auth            *auth.Service
-	Queries         *db.Queries
-	UploadDir       string
-	AuthHandler     *admin.AuthHandler
-	LogsHandler     *admin.LogsHandler
-	ConcertsHandler *admin.ConcertsHandler
-	VideosHandler   *admin.VideosHandler
-	AboutHandler    *admin.AboutHandler
-	SocialHandler   *admin.SocialHandler
-	ContactHandler  *admin.ContactHandler
+	Auth              *auth.Service
+	Queries           *db.Queries
+	UploadDir         string
+	AuthHandler       *admin.AuthHandler
+	LogsHandler       *admin.LogsHandler
+	ConcertsHandler   *admin.ConcertsHandler
+	VideosHandler     *admin.VideosHandler
+	AboutHandler      *admin.AboutHandler
+	SocialHandler     *admin.SocialHandler
+	OrganizersHandler *admin.OrganizersHandler
+	ContactHandler    *admin.ContactHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -115,9 +117,34 @@ func NewMux(deps Deps) http.Handler {
 	})
 
 	mux.HandleFunc("GET /pre-organizatorov", func(w http.ResponseWriter, r *http.Request) {
+		contactData, err := deps.ContactHandler.GetContact(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
+		docs, err := deps.Queries.ListOrganizerDocumentsOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
+		photoRows, err := deps.Queries.ListOrganizerPhotosOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(templates.Organizers(), w, r)
+		renderTemplate(templates.Organizers(
+			contactData,
+			organizers.DocumentsFromDBMany(docs),
+			organizers.PhotosFromDBMany(photoRows),
+		), w, r)
 	})
 
 	mux.HandleFunc("GET /admin", deps.AuthHandler.LoginPage)
@@ -205,8 +232,15 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/organizers", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminOrganizers(csrf(r)), w, r)
+		deps.OrganizersHandler.ListPage(w, r)
 	}))
+
+	mux.HandleFunc("PUT /admin/organizers/documents/{slot}", protected(deps.Auth, deps.OrganizersHandler.ReplaceDocument))
+	mux.HandleFunc("POST /admin/organizers/photos", protected(deps.Auth, deps.OrganizersHandler.CreatePhoto))
+	mux.HandleFunc("GET /admin/organizers/photos/{id}", protected(deps.Auth, deps.OrganizersHandler.PhotoRow))
+	mux.HandleFunc("GET /admin/organizers/photos/{id}/edit", protected(deps.Auth, deps.OrganizersHandler.PhotoEditForm))
+	mux.HandleFunc("PUT /admin/organizers/photos/{id}", protected(deps.Auth, deps.OrganizersHandler.UpdatePhotoAlt))
+	mux.HandleFunc("DELETE /admin/organizers/photos/{id}", protected(deps.Auth, deps.OrganizersHandler.DeletePhoto))
 
 	mux.HandleFunc("GET /admin/logs", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

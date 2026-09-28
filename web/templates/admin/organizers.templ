@@ -1,88 +1,139 @@
 package templates
 
-templ AdminOrganizers(csrf string) {
+import (
+	"strconv"
+
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/organizers"
+)
+
+templ AdminOrganizers(docs []db.OrganizerDocument, photos []db.OrganizerPhoto, csrf string) {
 	@AdminLayout("Organizátori", "organizers", csrf) {
-		@AdminPageHeader("Organizátori", "Súbory na stránke Pre organizátorov")
+		@AdminPageHeader("Organizátori", "Dokumenty a promo fotky na stránke Pre organizátorov")
 		<div class="admin-card">
 			<h2 class="text-xl font-bold text-white">Dokumenty</h2>
+			<p class="mt-1 text-sm text-white/50">Fixné 3 dokumenty — mení sa len súbor (musí byť PDF).</p>
 			<div class="mt-4 overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
 							<th class="pb-3 pr-4 font-semibold">Súbor</th>
 							<th class="pb-3 pr-4 font-semibold">Veľkosť</th>
+							<th class="pb-3 pr-4 font-semibold">Upravené</th>
 							<th class="pb-3 font-semibold text-right">Akcie</th>
 						</tr>
 					</thead>
 					<tbody>
-						@AdminFileRow("Technický rider", "poh-rider.pdf", "120 kB")
-						@AdminFileRow("Input list", "poh-input-list.pdf", "2,8 MB")
-						@AdminFileRow("Logo v krivkách", "poh-logo.pdf", "408 kB")
+						for _, d := range docs {
+							@AdminDocumentRow(d, "")
+						}
 					</tbody>
 				</table>
 			</div>
 		</div>
 		<div class="admin-card mt-6">
 			<h2 class="text-xl font-bold text-white">Promo fotky</h2>
-			<div class="mt-4 grid gap-4 sm:grid-cols-2">
-				@AdminPhotoCard("/static/images/promo-1-preview.webp", "poh-promo-1.png", "PNG • 2105 × 2560")
-				@AdminPhotoCard("/static/images/promo-2-preview.webp", "poh-promo-2.jpg", "JPG • 2560 × 2560")
-			</div>
-		</div>
-		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
-			<h2 class="text-xl font-bold text-white">Pridať súbor / fotku</h2>
-			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
+			<form id="organizer-photo-create-form" method="POST" action="/admin/organizers/photos" hx-post="/admin/organizers/photos" hx-target="#organizer-photo-grid" hx-swap="innerHTML" enctype="multipart/form-data" class="mt-5 grid gap-4 sm:grid-cols-2">
+				<input type="hidden" name="csrf_token" value={ csrf }/>
 				<div>
-					<label class="admin-label" for="file-name">Názov</label>
-					<input id="file-name" type="text" placeholder="napr. Stage plan" class="admin-input"/>
+					<label class="admin-label" for="photo-file">Fotka (plná kvalita)</label>
+					<input id="photo-file" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required class="admin-input"/>
 				</div>
 				<div>
-					<label class="admin-label" for="file-kind">Typ</label>
-					<select id="file-kind" class="admin-input">
-						<option>Dokument</option>
-						<option>Fotka</option>
-					</select>
+					<label class="admin-label" for="photo-preview">Náhľad (nepovinný, ľahký webp)</label>
+					<input id="photo-preview" name="preview" type="file" accept="image/jpeg,image/png,image/webp" class="admin-input"/>
 				</div>
 				<div class="sm:col-span-2">
-					<label class="admin-label" for="file-upload">Súbor</label>
-					<input id="file-upload" type="file" class="admin-input"/>
+					<label class="admin-label" for="photo-alt">Popis (alt text)</label>
+					<input id="photo-alt" name="alt" type="text" maxlength="200" placeholder="napr. Kapela P.O.H – promo foto" autocomplete="off" class="admin-input"/>
 				</div>
 				<div class="sm:col-span-2">
-					<button type="submit" class="admin-btn">Nahrať</button>
+					<button type="submit" class="admin-btn">Pridať fotku</button>
 				</div>
 			</form>
+		</div>
+		<div id="organizer-photo-grid" class="mt-6">
+			@AdminPhotoGrid(photos)
 		</div>
 	}
 }
 
-templ AdminFileRow(name string, filename string, size string) {
+templ AdminDocumentRow(d db.OrganizerDocument, errMsg string) {
 	<tr class="border-t border-white/10">
 		<td class="py-3 pr-4">
-			<span class="block font-semibold text-white">{ name }</span>
-			<span class="block text-xs text-white/40">{ filename }</span>
+			<span class="block font-semibold text-white">{ d.DisplayName }</span>
+			<span class="block text-xs text-white/40 break-all">{ organizers.FileName(d.FilePath) }</span>
+			if errMsg != "" {
+				<p role="alert" class="mt-1 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
 		</td>
-		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ size }</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ organizers.HumanSize(d.SizeBytes) }</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ organizers.FormatUpdated(d.UpdatedAt) }</td>
 		<td class="py-3">
-			<div class="flex justify-end gap-2">
-				<label class="admin-btn-row cursor-pointer">
-					Nahradiť
-					<input type="file" class="hidden" onchange="adminToast('Demo režim — napoj na backend')"/>
-				</label>
-				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
-			</div>
+			<form hx-put={ organizerDocURL(d.Slot) } hx-target="closest tr" hx-swap="outerHTML" enctype="multipart/form-data" class="flex items-center justify-end gap-2">
+				<input type="file" name="file" accept="application/pdf" required aria-label={ "Nový súbor pre " + d.DisplayName } class="max-w-44 text-xs text-white/50 file:mr-2 file:rounded-lg file:border file:border-white/15 file:bg-white/5 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white/70 hover:file:border-amber-400 hover:file:text-amber-400"/>
+				<button type="submit" class="admin-btn-row cursor-pointer shrink-0">Nahradiť</button>
+			</form>
 		</td>
 	</tr>
 }
 
-templ AdminPhotoCard(preview string, filename string, meta string) {
-	<div class="rounded-xl overflow-hidden border border-white/10">
-		<img src={ preview } alt={ filename } class="w-full h-56 object-cover object-top"/>
-		<div class="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/10">
-			<div class="min-w-0">
-				<p class="text-sm font-semibold text-white truncate">{ filename }</p>
-				<p class="text-xs text-white/40">{ meta }</p>
+templ AdminPhotoGrid(photos []db.OrganizerPhoto) {
+	<div class="admin-card">
+		if len(photos) == 0 {
+			<p class="mt-3 text-sm text-white/50">Zatiaľ žiadne fotky. Pridaj prvú cez formulár vyššie.</p>
+		} else {
+			<div class="mt-3 grid gap-4 sm:grid-cols-2">
+				for _, p := range photos {
+					@AdminPhotoCard(p, "")
+				}
 			</div>
-			<button type="button" class="admin-btn-row-danger shrink-0" data-demo-delete>Zmazať</button>
+		}
+	</div>
+}
+
+templ AdminPhotoCard(p db.OrganizerPhoto, errMsg string) {
+	<div class="rounded-xl overflow-hidden border border-white/10" data-id={ strconv.FormatInt(p.ID, 10) }>
+		<img src={ p.PreviewPath } alt={ organizers.PhotoAlt(organizers.PhotoFromDB(p)) } class="w-full h-56 object-cover object-top" loading="lazy"/>
+		<div class="px-4 py-3 border-t border-white/10">
+			<p class="text-sm font-semibold text-white truncate">{ organizers.FileName(p.FilePath) }</p>
+			<p class="text-xs text-white/40">{ p.MetaLabel }</p>
+			if p.Alt != "" {
+				<p class="mt-1 text-xs text-white/60">{ p.Alt }</p>
+			}
+			<div class="mt-2 flex justify-end gap-2">
+				<button type="button" class="admin-btn-row cursor-pointer" hx-get={ organizerPhotoURL(p.ID, "/edit") } hx-target="closest div[data-id]" hx-swap="outerHTML">Upraviť popis</button>
+				<button type="button" class="admin-btn-row-danger cursor-pointer" hx-delete={ organizerPhotoURL(p.ID, "") } hx-target="closest div[data-id]" hx-swap="delete" hx-confirm="Naozaj zmazať fotku?">Zmazať</button>
+			</div>
 		</div>
 	</div>
+}
+
+templ AdminPhotoEditCard(p db.OrganizerPhoto, errMsg string) {
+	<div class="rounded-xl overflow-hidden border border-amber-400/40 bg-amber-400/[0.04]" data-id={ strconv.FormatInt(p.ID, 10) }>
+		<img src={ p.PreviewPath } alt="" class="w-full h-56 object-cover object-top" loading="lazy"/>
+		<div class="px-4 py-3">
+			if errMsg != "" {
+				<p role="alert" class="mb-2 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			<form hx-put={ organizerPhotoURL(p.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML" class="grid gap-3">
+				<div>
+					<label class="admin-label" for={ "edit-alt-" + strconv.FormatInt(p.ID, 10) }>Popis (alt text)</label>
+					<input id={ "edit-alt-" + strconv.FormatInt(p.ID, 10) } name="alt" type="text" maxlength="200" value={ p.Alt } autocomplete="off" class="admin-input"/>
+				</div>
+				<div class="flex gap-2">
+					<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+					<button type="button" class="admin-btn-row cursor-pointer" hx-get={ organizerPhotoURL(p.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML">Zrušiť</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+func organizerDocURL(slot string) string {
+	return "/admin/organizers/documents/" + slot
+}
+
+func organizerPhotoURL(id int64, suffix string) string {
+	return "/admin/organizers/photos/" + strconv.FormatInt(id, 10) + suffix
 }
