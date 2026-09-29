@@ -12,18 +12,18 @@ templ AdminContact(data contact.Contact, csrf string, errMsg string) {
 			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="sm:col-span-2 flex flex-wrap items-center gap-5">
 					if data.PhotoPath != "" {
-						<img id="contact-photo-img" src={ data.PhotoPath } alt="Aktuálna fotka" class="w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
+						<img id="contact-photo-img" src={ data.PhotoPath } alt="Aktuálna fotka" class="w-20 h-20 rounded-full object-cover ring-2 ring-brand-400/60"/>
 					} else {
-						<img id="contact-photo-img" src="" alt="Aktuálna fotka" class="hidden w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"/>
+						<img id="contact-photo-img" src="" alt="Aktuálna fotka" class="hidden w-20 h-20 rounded-full object-cover ring-2 ring-brand-400/60"/>
 					}
 					if data.PhotoPath != "" {
-						<div id="contact-photo-silhouette" class="hidden w-20 h-20 rounded-full ring-2 ring-amber-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
+						<div id="contact-photo-silhouette" class="hidden w-20 h-20 rounded-full ring-2 ring-brand-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
 							<svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"></path>
 							</svg>
 						</div>
 					} else {
-						<div id="contact-photo-silhouette" class="w-20 h-20 rounded-full ring-2 ring-amber-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
+						<div id="contact-photo-silhouette" class="w-20 h-20 rounded-full ring-2 ring-brand-400/60 bg-white/5 items-center justify-center text-white/30 flex" aria-hidden="true">
 							<svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"></path>
 							</svg>
@@ -53,12 +53,12 @@ templ AdminContact(data contact.Contact, csrf string, errMsg string) {
 				<div class="mt-4 flex flex-col sm:flex-row items-center gap-5">
 					<canvas id="contact-crop-canvas" width="360" height="360" class="w-full max-w-[360px] aspect-square rounded-xl bg-black/60 cursor-grab touch-none"></canvas>
 					<div class="flex flex-col items-center gap-2">
-						<canvas id="contact-crop-preview" width="144" height="144" class="w-24 h-24 rounded-full object-cover ring-2 ring-amber-400/60"></canvas>
+						<canvas id="contact-crop-preview" width="144" height="144" class="w-24 h-24 rounded-full object-cover ring-2 ring-brand-400/60"></canvas>
 						<span class="text-xs text-white/40">Náhľad</span>
 					</div>
 				</div>
 				<label class="admin-label mt-4" for="contact-crop-zoom">Priblíženie</label>
-				<input id="contact-crop-zoom" type="range" min="1" max="4" step="0.01" value="1" class="w-full accent-amber-400"/>
+				<input id="contact-crop-zoom" type="range" min="1" max="4" step="0.01" value="1" class="w-full accent-brand-400"/>
 				<p id="contact-crop-error" role="alert" class="hidden mt-2 text-sm font-semibold text-red-300"></p>
 				<div class="mt-4 flex justify-end gap-3">
 					<button id="contact-crop-cancel" type="button" class="admin-nav-item cursor-pointer">Zrušiť</button>

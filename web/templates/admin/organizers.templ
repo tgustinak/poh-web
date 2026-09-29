@@ -71,7 +71,7 @@ templ AdminDocumentRow(d db.OrganizerDocument, errMsg string) {
 		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ organizers.FormatUpdated(d.UpdatedAt) }</td>
 		<td class="py-3">
 			<form hx-put={ organizerDocURL(d.Slot) } hx-target="closest tr" hx-swap="outerHTML" enctype="multipart/form-data" class="flex items-center justify-end gap-2">
-				<input type="file" name="file" accept="application/pdf" required aria-label={ "Nový súbor pre " + d.DisplayName } class="max-w-44 text-xs text-white/50 file:mr-2 file:rounded-lg file:border file:border-white/15 file:bg-white/5 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white/70 hover:file:border-amber-400 hover:file:text-amber-400"/>
+				<input type="file" name="file" accept="application/pdf" required aria-label={ "Nový súbor pre " + d.DisplayName } class="max-w-44 text-xs text-white/50 file:mr-2 file:rounded-lg file:border file:border-white/15 file:bg-white/5 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white/70 hover:file:border-brand-400 hover:file:text-brand-400"/>
 				<button type="submit" class="admin-btn-row cursor-pointer shrink-0">Nahradiť</button>
 			</form>
 		</td>
@@ -110,7 +110,7 @@ templ AdminPhotoCard(p db.OrganizerPhoto, errMsg string) {
 }
 
 templ AdminPhotoEditCard(p db.OrganizerPhoto, errMsg string) {
-	<div class="rounded-xl overflow-hidden border border-amber-400/40 bg-amber-400/[0.04]" data-id={ strconv.FormatInt(p.ID, 10) }>
+	<div class="rounded-xl overflow-hidden border border-brand-400/40 bg-brand-400/[0.04]" data-id={ strconv.FormatInt(p.ID, 10) }>
 		<img src={ p.PreviewPath } alt="" class="w-full h-56 object-cover object-top" loading="lazy"/>
 		<div class="px-4 py-3">
 			if errMsg != "" {

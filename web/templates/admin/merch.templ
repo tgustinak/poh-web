@@ -54,9 +54,9 @@ templ AdminMerch(csrf string) {
 templ AdminSizeCheck(size string, checked bool) {
 	<label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-bold text-white/70">
 		if checked {
-			<input type="checkbox" checked class="accent-amber-400"/>
+			<input type="checkbox" checked class="accent-brand-400"/>
 		} else {
-			<input type="checkbox" class="accent-amber-400"/>
+			<input type="checkbox" class="accent-brand-400"/>
 		}
 		{ size }
 	</label>

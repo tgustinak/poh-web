@@ -11,7 +11,7 @@ templ Klipy(clips []videos.Video) {
 	<section id="klipy" class="bg-black border-t border-white/5">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
 			<div class="text-center">
-				<p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Videoklipy</p>
+				<p class="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400">Videoklipy</p>
 				<h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-wide text-white/90">Klipy</h2>
 				<p class="mt-4 max-w-2xl mx-auto text-white/60">
 					Od najnovšieho singla až po naše prvé video. Vyber si z playlistu.
@@ -40,7 +40,7 @@ templ Klipy(clips []videos.Video) {
 										data-duration={ clips[0].Duration }
 										onclick="klipPlay(this)"
 									>
-										<span class="flex items-center justify-center w-16 h-16 rounded-full bg-amber-400 text-black transition hover:scale-105">
+										<span class="flex items-center justify-center w-16 h-16 rounded-full bg-brand-400 text-black transition hover:scale-105">
 											<svg class="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
 										</span>
 										<span class="rounded-full border border-white/25 bg-black/70 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white/85">Načítať video</span>
@@ -57,7 +57,7 @@ templ Klipy(clips []videos.Video) {
 									href={ "https://www.youtube.com/watch?v=" + clips[0].YoutubeID }
 									target="_blank"
 									rel="noopener"
-									class="shrink-0 text-sm font-medium text-white/60 transition hover:text-amber-400"
+									class="shrink-0 text-sm font-medium text-white/60 transition hover:text-brand-400"
 								>
 									Pozrieť na YouTube ↗
 								</a>

@@ -1,13 +1,73 @@
 package templates
 
-templ AdminMusic(csrf string) {
+import (
+	"strconv"
+
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/music"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+)
+
+templ AdminMusic(rows []db.Album, csrf string) {
 	@AdminLayout("Hudba", "music", csrf) {
 		@AdminPageHeader("Hudba – diskografia", "Albumy v sekcii Hudba, od najnovšieho")
 		<div class="admin-card">
-			<div class="overflow-x-auto">
+			<h2 class="text-xl font-bold text-white">Spotify</h2>
+			<p class="mt-1 text-sm text-white/50">
+				Prehrávač a linky v sekcii Hudba používajú Spotify URL zo sekcie
+				<a href="/admin/social" class="font-semibold text-brand-400 transition hover:text-brand-300">Social</a>.
+			</p>
+		</div>
+		<div class="admin-card mt-6">
+			<h2 class="text-xl font-bold text-white">Pridať album</h2>
+			<form id="album-create-form" method="POST" action="/admin/music" hx-post="/admin/music" hx-target="#album-list" hx-swap="innerHTML" enctype="multipart/form-data" class="mt-5 grid gap-4 sm:grid-cols-2">
+				<input type="hidden" name="csrf_token" value={ csrf }/>
+				<div>
+					<label class="admin-label" for="album-title">Názov</label>
+					<input id="album-title" name="title" type="text" required maxlength="100" placeholder="Názov albumu" autocomplete="off" class="admin-input"/>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="admin-label" for="album-year">Rok</label>
+						<input id="album-year" name="year" type="number" required min="1900" max="2100" placeholder="2026" class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for="album-badge">Štítok (nepovinný)</label>
+						<input id="album-badge" name="badge" type="text" maxlength="50" placeholder="Novinka" autocomplete="off" class="admin-input"/>
+					</div>
+				</div>
+				<div>
+					<label class="admin-label" for="album-cover">Obal (štvorec)</label>
+					<input id="album-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required class="admin-input"/>
+				</div>
+				<div class="flex items-end pb-1">
+					<label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-white/70">
+						<input type="checkbox" name="is_new" value="1" checked class="accent-brand-400"/>
+						Novinka (zlatý štítok)
+					</label>
+				</div>
+				<div class="sm:col-span-2 flex items-end">
+					<button type="submit" class="admin-btn">Pridať album</button>
+				</div>
+			</form>
+		</div>
+		<div id="album-list" class="mt-6">
+			@AdminAlbumList(rows)
+		</div>
+		@scripts.Defer("albums", AdminAlbumsScripts())
+	}
+}
+
+templ AdminAlbumList(rows []db.Album) {
+	<div class="admin-card">
+		if len(rows) == 0 {
+			<p class="mt-3 text-sm text-white/50">Zatiaľ žiadne albumy. Pridaj prvý cez formulár vyššie.</p>
+		} else {
+			<div class="mt-3 overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="text-left text-xs uppercase tracking-wider text-white/40">
+							<th class="pb-3 pr-4 font-semibold">#</th>
 							<th class="pb-3 pr-4 font-semibold">Obal</th>
 							<th class="pb-3 pr-4 font-semibold">Názov</th>
 							<th class="pb-3 pr-4 font-semibold">Rok</th>
@@ -15,53 +75,240 @@ templ AdminMusic(csrf string) {
 							<th class="pb-3 font-semibold text-right">Akcie</th>
 						</tr>
 					</thead>
-					<tbody>
-						@AdminAlbumRow("/static/images/album-zivot.webp", "Život", "2026", "Novinka")
-						@AdminAlbumRow("/static/images/album-na-konci-sveta.jpg", "Na konci sveta", "2021", "Debut")
+					<tbody id="album-list-body">
+						for i, a := range rows {
+							@AdminAlbumRow(a, i+1)
+						}
 					</tbody>
 				</table>
 			</div>
-		</div>
-		<div id="pridat" class="admin-card mt-6 scroll-mt-6">
-			<h2 class="text-xl font-bold text-white">Pridať album</h2>
-			<form data-demo class="mt-5 grid gap-4 sm:grid-cols-2">
-				<div>
-					<label class="admin-label" for="album-title">Názov</label>
-					<input id="album-title" type="text" placeholder="Názov albumu" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="album-year">Rok</label>
-					<input id="album-year" type="number" placeholder="2026" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="album-badge">Štítok</label>
-					<input id="album-badge" type="text" placeholder="Novinka" class="admin-input"/>
-				</div>
-				<div>
-					<label class="admin-label" for="album-cover">Obal (štvorec)</label>
-					<input id="album-cover" type="file" accept="image/*" class="admin-input"/>
-				</div>
-				<div class="sm:col-span-2">
-					<button type="submit" class="admin-btn">Pridať album</button>
-				</div>
-			</form>
-		</div>
-	}
+		}
+	</div>
 }
 
-templ AdminAlbumRow(cover string, title string, year string, badge string) {
-	<tr class="border-t border-white/10">
-		<td class="py-3 pr-4">
-			<img src={ cover } alt={ "Obal " + title } class="w-12 h-12 rounded-lg object-cover"/>
+templ AdminAlbumRow(a db.Album, pos int) {
+	<tr class="border-t border-white/10 cursor-grab" data-id={ strconv.FormatInt(a.ID, 10) } draggable="true">
+		<td class="py-3 pr-4 whitespace-nowrap">
+			<span class="inline-flex items-center gap-2">
+				<span class="inline-flex cursor-grab items-center justify-center w-7 h-7 rounded border border-white/15 text-white/40 select-none" title="Potiahni pre zmenu poradia" aria-hidden="true">⋮⋮</span>
+				<span class="album-pos text-white/40">{ strconv.Itoa(pos) }</span>
+			</span>
 		</td>
-		<td class="py-3 pr-4 font-semibold text-white">{ title }</td>
-		<td class="py-3 pr-4 text-white/70">{ year }</td>
-		<td class="py-3 pr-4"><span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{ badge }</span></td>
+		<td class="py-3 pr-4">
+			<img src={ a.CoverPath } alt={ music.CoverAlt(a.Title, a.Year) } class="w-12 h-12 rounded-lg object-cover"/>
+		</td>
+		<td class="py-3 pr-4">
+			<span class="block font-semibold text-white">{ a.Title }</span>
+			if a.IsNew == 1 {
+				<span class="mt-1 inline-block rounded-full bg-brand-400 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-black">Novinka</span>
+			}
+		</td>
+		<td class="py-3 pr-4 text-white/70 whitespace-nowrap">{ strconv.FormatInt(a.Year, 10) }</td>
+		<td class="py-3 pr-4">
+			if a.Badge != "" {
+				<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{ a.Badge }</span>
+			} else {
+				<span class="text-white/30">—</span>
+			}
+		</td>
 		<td class="py-3">
 			<div class="flex justify-end gap-2">
-				<button type="button" class="admin-btn-row" onclick="adminToast('Demo režim — napoj na backend')">Upraviť</button>
-				<button type="button" class="admin-btn-row-danger" data-demo-delete>Zmazať</button>
+				<button type="button" class="admin-btn-row cursor-pointer" hx-get={ albumURL(a.ID, "/edit") } hx-target="closest tr" hx-swap="outerHTML">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger cursor-pointer" hx-delete={ albumURL(a.ID, "") } hx-target="closest tr" hx-swap="delete" hx-confirm="Naozaj zmazať album?">Zmazať</button>
 			</div>
 		</td>
 	</tr>
+}
+
+templ AdminAlbumEditRow(a db.Album, errMsg string) {
+	<tr class="border-t border-brand-400/40 bg-brand-400/[0.04]" data-id={ strconv.FormatInt(a.ID, 10) }>
+		<td colspan="6" class="px-4 py-4">
+			if errMsg != "" {
+				<p role="alert" class="mb-3 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			<form hx-put={ albumURL(a.ID, "") } hx-target="closest tr" hx-swap="outerHTML" enctype="multipart/form-data" class="grid gap-3 sm:grid-cols-2">
+				<div>
+					<label class="admin-label" for={ "edit-title-" + strconv.FormatInt(a.ID, 10) }>Názov</label>
+					<input id={ "edit-title-" + strconv.FormatInt(a.ID, 10) } name="title" type="text" required maxlength="100" value={ a.Title } autocomplete="off" class="admin-input"/>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="admin-label" for={ "edit-year-" + strconv.FormatInt(a.ID, 10) }>Rok</label>
+						<input id={ "edit-year-" + strconv.FormatInt(a.ID, 10) } name="year" type="number" required min="1900" max="2100" value={ strconv.FormatInt(a.Year, 10) } class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for={ "edit-badge-" + strconv.FormatInt(a.ID, 10) }>Štítok (nepovinný)</label>
+						<input id={ "edit-badge-" + strconv.FormatInt(a.ID, 10) } name="badge" type="text" maxlength="50" value={ a.Badge } autocomplete="off" class="admin-input"/>
+					</div>
+				</div>
+				<div>
+					<label class="admin-label" for={ "edit-cover-" + strconv.FormatInt(a.ID, 10) }>Obal (prázdne = ponechať)</label>
+					<input id={ "edit-cover-" + strconv.FormatInt(a.ID, 10) } name="cover" type="file" accept="image/jpeg,image/png,image/webp" class="admin-input"/>
+				</div>
+				<div class="flex items-end pb-1">
+					<label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-white/70">
+						if a.IsNew == 1 {
+							<input type="checkbox" name="is_new" value="1" checked class="accent-brand-400"/>
+						} else {
+							<input type="checkbox" name="is_new" value="1" class="accent-brand-400"/>
+						}
+						Novinka (zlatý štítok)
+					</label>
+				</div>
+				<div class="sm:col-span-2 flex gap-2">
+					<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+					<button type="button" class="admin-btn-row cursor-pointer" hx-get={ albumURL(a.ID, "") } hx-target="closest tr" hx-swap="outerHTML">Zrušiť</button>
+				</div>
+			</form>
+		</td>
+	</tr>
+}
+
+templ AdminAlbumsScripts() {
+	<script>
+		(function albumReorderInit() {
+			function csrfToken() {
+				const m = document.querySelector('meta[name="csrf-token"]');
+				return m ? m.content : '';
+			}
+			function rowIDs(tbody) {
+				return Array.from(tbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
+			}
+			function renumber(tbody) {
+				Array.from(tbody.querySelectorAll('tr[data-id]')).forEach((tr, i) => {
+					const num = tr.querySelector('.album-pos');
+					if (num) {
+						num.textContent = String(i + 1);
+					}
+				});
+			}
+			function markDragging(tr) {
+				if (tr) {
+					tr.style.opacity = '0.4';
+				}
+			}
+			function unmarkDragging(tr) {
+				if (tr) {
+					tr.style.opacity = '';
+				}
+			}
+			let saveTimer = null;
+			function saveOrder(tbody) {
+				if (saveTimer) {
+					clearTimeout(saveTimer);
+				}
+				saveTimer = setTimeout(() => {
+					const params = new URLSearchParams();
+					rowIDs(tbody).forEach(id => params.append('id', id));
+					fetch('/admin/music/reorder', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							'X-CSRF-Token': csrfToken(),
+							'HX-Request': 'true',
+						},
+						body: params.toString(),
+					}).then(async (resp) => {
+						const html = await resp.text();
+						const list = document.getElementById('album-list');
+						if (resp.ok && list && html.includes('album-list-body')) {
+							list.innerHTML = html;
+							bindAlbumReorder();
+							if (window.htmx) {
+								window.htmx.process(list);
+							}
+						}
+						const trigger = resp.headers.get('HX-Trigger');
+						if (trigger) {
+							try {
+								const payload = JSON.parse(trigger);
+								const msg = payload && payload.showToast;
+								if (msg && window.adminToast) {
+									window.adminToast(msg);
+								}
+							} catch (e) {}
+						}
+					}).catch(() => {
+						if (window.adminToast) {
+							window.adminToast('Poradie sa nepodarilo uložiť.');
+						}
+					});
+				}, 400);
+			}
+			let dragRow = null;
+			function onDragStart(e) {
+				const tr = e.target.closest('tr[data-id]');
+				if (!tr) {
+					return;
+				}
+				dragRow = tr;
+				markDragging(tr);
+				e.dataTransfer.effectAllowed = 'move';
+				try {
+					e.dataTransfer.setData('text/plain', tr.dataset.id);
+				} catch (err) {}
+			}
+			function onDragOver(e) {
+				if (!dragRow) {
+					return;
+				}
+				e.preventDefault();
+				const over = e.target.closest('tr[data-id]');
+				if (!over || over === dragRow) {
+					return;
+				}
+				const tbody = over.parentNode;
+				const rect = over.getBoundingClientRect();
+				const after = (e.clientY - rect.top) > rect.height / 2;
+				if (after) {
+					tbody.insertBefore(dragRow, over.nextSibling);
+				} else {
+					tbody.insertBefore(dragRow, over);
+				}
+				renumber(tbody);
+			}
+			function onDrop(e) {
+				if (!dragRow) {
+					return;
+				}
+				e.preventDefault();
+				const tbody = dragRow.parentNode;
+				unmarkDragging(dragRow);
+				dragRow = null;
+				renumber(tbody);
+				saveOrder(tbody);
+			}
+			function onDragEnd() {
+				if (!dragRow) {
+					return;
+				}
+				const tbody = dragRow.parentNode;
+				unmarkDragging(dragRow);
+				dragRow = null;
+				renumber(tbody);
+				saveOrder(tbody);
+			}
+			function bindAlbumReorder() {
+				const tbody = document.getElementById('album-list-body');
+				if (!tbody || tbody.dataset.bound === '1') {
+					return;
+				}
+				tbody.dataset.bound = '1';
+				tbody.addEventListener('dragstart', onDragStart);
+				tbody.addEventListener('dragover', onDragOver);
+				tbody.addEventListener('drop', onDrop);
+				tbody.addEventListener('dragend', onDragEnd);
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', bindAlbumReorder);
+			} else {
+				bindAlbumReorder();
+			}
+			document.body.addEventListener('htmx:afterSwap', bindAlbumReorder);
+		})();
+	</script>
+}
+
+func albumURL(id int64, suffix string) string {
+	return "/admin/music/" + strconv.FormatInt(id, 10) + suffix
 }

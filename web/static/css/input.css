@@ -2,6 +2,14 @@
 
 @source "../../../web";
 
+@theme {
+  /* Brand accent – jediný zdroj pravdy pre zvýrazňovaciu farbu.
+    Pôvodná žltá (amber-300/400). Pri ďalšom rebrande stačí zmeniť tieto dva riadky,
+    triedy brand-* v šablónach ostávajú bez zmeny. */
+  --color-brand-300: #fcd34d;
+  --color-brand-400: #fbbf24;
+}
+
 @layer base {
   :root {
     color-scheme: dark;
@@ -23,12 +31,12 @@
 
 @layer components {
   .nav-link {
-    @apply relative px-3 py-2 text-sm font-medium tracking-wide text-white/80 uppercase transition-colors duration-300 hover:text-amber-400;
+    @apply relative px-3 py-2 text-sm font-medium tracking-wide text-white/80 uppercase transition-colors duration-300 hover:text-brand-400;
   }
 
   .nav-link::after {
     content: "";
-    @apply absolute bottom-0 left-1/2 w-0 h-0.5 bg-amber-400 transition-all duration-300 -translate-x-1/2;
+    @apply absolute bottom-0 left-1/2 w-0 h-0.5 bg-brand-400 transition-all duration-300 -translate-x-1/2;
   }
 
   .nav-link:hover::after {
@@ -36,11 +44,11 @@
   }
 
   .mobile-nav-link {
-    @apply block px-4 py-3 text-base font-medium tracking-wide text-white/80 uppercase transition-all duration-300 hover:text-amber-400 hover:pl-6 border-l-2 border-transparent hover:border-amber-400;
+    @apply block px-4 py-3 text-base font-medium tracking-wide text-white/80 uppercase transition-all duration-300 hover:text-brand-400 hover:pl-6 border-l-2 border-transparent hover:border-brand-400;
   }
 
   .nav-link-active {
-    @apply text-amber-400;
+    @apply text-brand-400;
   }
 
   .nav-link-active::after {
@@ -48,19 +56,19 @@
   }
 
   .mobile-nav-big {
-    @apply px-4 py-2 text-2xl font-bold tracking-wide text-white/85 uppercase transition-colors duration-300 hover:text-amber-400;
+    @apply px-4 py-2 text-2xl font-bold tracking-wide text-white/85 uppercase transition-colors duration-300 hover:text-brand-400;
     opacity: 0;
     animation: nav-fade-up 0.4s ease forwards;
   }
 
   .mobile-nav-big-cta {
-    @apply mt-4 rounded-full bg-amber-400 px-8 py-3 text-base font-bold uppercase tracking-widest text-black transition hover:bg-amber-300;
+    @apply mt-4 rounded-full bg-brand-400 px-8 py-3 text-base font-bold uppercase tracking-widest text-black transition hover:bg-brand-300;
     opacity: 0;
     animation: nav-fade-up 0.4s ease forwards;
   }
 
   .mobile-nav-org {
-    @apply mt-3 rounded-full border border-white/20 px-8 py-2.5 text-sm font-bold uppercase tracking-widest text-white/70 transition hover:border-amber-400/70 hover:text-amber-400;
+    @apply mt-3 rounded-full border border-white/20 px-8 py-2.5 text-sm font-bold uppercase tracking-widest text-white/70 transition hover:border-brand-400/70 hover:text-brand-400;
     opacity: 0;
     animation: nav-fade-up 0.4s ease forwards;
   }
@@ -205,11 +213,11 @@
   }
 
   .merch-pill {
-    @apply rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-black/70 backdrop-blur border border-white/20 text-white/80 transition hover:border-amber-400/60 hover:text-white;
+    @apply rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-black/70 backdrop-blur border border-white/20 text-white/80 transition hover:border-brand-400/60 hover:text-white;
   }
 
   .merch-pill-active {
-    @apply bg-amber-400 border-amber-400 text-black hover:text-black;
+    @apply bg-brand-400 border-brand-400 text-black hover:text-black;
   }
 
   .merch-thumb {
@@ -217,19 +225,19 @@
   }
 
   .merch-thumb-active {
-    @apply border-amber-400/60 opacity-100;
+    @apply border-brand-400/60 opacity-100;
   }
 
   .merch-size {
-    @apply min-w-12 rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-white/70 transition hover:border-amber-400/60 hover:text-white;
+    @apply min-w-12 rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-white/70 transition hover:border-brand-400/60 hover:text-white;
   }
 
   .merch-size-active {
-    @apply bg-amber-400 border-amber-400 text-black hover:text-black;
+    @apply bg-brand-400 border-brand-400 text-black hover:text-black;
   }
 
   .admin-input {
-    @apply w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/30 transition focus:border-amber-400 focus:outline-none;
+    @apply w-full rounded-lg border border-white/15 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/30 transition focus:border-brand-400 focus:outline-none;
   }
 
   select.admin-input {
@@ -245,7 +253,7 @@
   }
 
   .admin-btn {
-    @apply inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-amber-300;
+    @apply inline-flex items-center gap-2 rounded-full bg-brand-400 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-brand-300;
   }
 
   .admin-btn-danger {
@@ -253,7 +261,7 @@
   }
 
   .admin-btn-row {
-    @apply inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:border-amber-400 hover:text-amber-400;
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:border-brand-400 hover:text-brand-400;
   }
 
   .admin-btn-row-danger {
@@ -269,15 +277,15 @@
   }
 
   .admin-nav-item-active {
-    @apply bg-amber-400/10 text-amber-400 hover:bg-amber-400/10 hover:text-amber-400;
+    @apply bg-brand-400/10 text-brand-400 hover:bg-brand-400/10 hover:text-brand-400;
   }
 
   .admin-nav-pill {
-    @apply shrink-0 rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/70 transition hover:border-amber-400 hover:text-amber-400;
+    @apply shrink-0 rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/70 transition hover:border-brand-400 hover:text-brand-400;
   }
 
   .admin-nav-pill-active {
-    @apply border-amber-400/60 bg-amber-400/10 text-amber-400;
+    @apply border-brand-400/60 bg-brand-400/10 text-brand-400;
   }
 
   .klip-row {
@@ -285,7 +293,7 @@
   }
 
   .klip-row-active {
-    @apply border-amber-400/50 bg-amber-400/[0.07] hover:border-amber-400/50;
+    @apply border-brand-400/50 bg-brand-400/[0.07] hover:border-brand-400/50;
   }
 
   .klip-list {
@@ -303,6 +311,35 @@
 
   .klip-list::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  .album-carousel {
+    --album-fade-l: 0px;
+    --album-fade-r: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--album-fade-l), #000 calc(100% - var(--album-fade-r)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--album-fade-l), #000 calc(100% - var(--album-fade-r)), transparent 100%);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .album-carousel::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .album-carousel::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-white/15;
+  }
+
+  .album-carousel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .album-arrow {
+    @apply flex items-center justify-center w-9 h-9 rounded-full border border-white/15 text-lg font-bold leading-none text-white/70 transition hover:border-brand-400 hover:text-brand-400 cursor-pointer;
+  }
+
+  .album-arrow-disabled {
+    @apply opacity-30 pointer-events-none;
   }
 
   .past-body {

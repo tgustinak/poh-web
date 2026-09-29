@@ -15,8 +15,8 @@ templ AdminDashboard(csrf string, upcomingConcerts int64) {
 			@AdminDashCard("/admin/contact", "Kontakt", "Manažérka", "Fotka, telefón, e-mail")
 			@AdminDashCard("/admin/organizers", "Organizátori", "5 súborov", "Rider, fotky, logo")
 			@AdminDashCard("/admin/logs", "Logy", "naživo", "Logy aplikácie")
-			<a href="/" target="_blank" rel="noopener" class="admin-card group transition hover:border-amber-400/40">
-				<p class="text-2xl font-bold text-white group-hover:text-amber-400">Web ↗</p>
+			<a href="/" target="_blank" rel="noopener" class="admin-card group transition hover:border-brand-400/40">
+				<p class="text-2xl font-bold text-white group-hover:text-brand-400">Web ↗</p>
 				<p class="mt-1 text-sm text-white/50">Otvoriť stránku v novom okne</p>
 			</a>
 		</div>
@@ -24,9 +24,9 @@ templ AdminDashboard(csrf string, upcomingConcerts int64) {
 }
 
 templ AdminDashCard(href string, title string, stat string, sub string) {
-	<a href={ href } class="admin-card group transition hover:border-amber-400/40">
-		<p class="text-2xl font-bold text-white group-hover:text-amber-400">{ title }</p>
-		<p class="mt-1 text-sm font-semibold text-amber-400/90">{ stat }</p>
+	<a href={ href } class="admin-card group transition hover:border-brand-400/40">
+		<p class="text-2xl font-bold text-white group-hover:text-brand-400">{ title }</p>
+		<p class="mt-1 text-sm font-semibold text-brand-400/90">{ stat }</p>
 		<p class="mt-1 text-sm text-white/50">{ sub }</p>
 	</a>
 }

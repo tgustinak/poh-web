@@ -17,8 +17,8 @@ templ ConsentBanner() {
 			Používame nevyhnutné cookies (napr. prihlásenie do administrácie). Prehrávač Spotify a videá z YouTube (v režime zvýšenej ochrany súkromia) sa načítajú až po tvojom súhlase.
 		</p>
 		<div class="mt-4 flex flex-col sm:flex-row gap-2">
-			<button type="button" onclick="pohConsentAccept()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-amber-300 cursor-pointer"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>Prijať všetky</button>
-			<button type="button" onclick="pohConsentReject()" class="flex-1 rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white/70 transition hover:border-amber-400 hover:text-amber-400 cursor-pointer">Len nevyhnutné</button>
+			<button type="button" onclick="pohConsentAccept()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-brand-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-brand-300 cursor-pointer"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>Prijať všetky</button>
+			<button type="button" onclick="pohConsentReject()" class="flex-1 rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white/70 transition hover:border-brand-400 hover:text-brand-400 cursor-pointer">Len nevyhnutné</button>
 		</div>
 	</div>
 	@scripts.Defer("consent", ConsentScripts())
@@ -134,5 +134,5 @@ templ ConsentScripts() {
 
 // ConsentResetLink re-opens the consent banner (footer usage).
 templ ConsentResetLink() {
-	<button type="button" onclick="pohConsentReset()" class="text-sm text-white/40 transition hover:text-amber-400 cursor-pointer">Cookies</button>
+	<button type="button" onclick="pohConsentReset()" class="text-sm text-white/40 transition hover:text-brand-400 cursor-pointer">Cookies</button>
 }

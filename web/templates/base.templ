@@ -13,6 +13,11 @@ templ Base(title string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title }</title>
 			<link rel="stylesheet" href={ static.URL("css/output.css") }/>
+			<link rel="icon" type="image/svg+xml" href={ static.URL("images/favicon.svg") }/>
+			<link rel="alternate icon" type="image/png" href={ static.URL("images/favicon-32x32.png") }/>
+			<link rel="apple-touch-icon" href={ static.URL("images/apple-touch-icon.png") }/>
+			<link rel="manifest" href={ static.URL("site.webmanifest") }/>
+			<meta name="theme-color" content="#09090b"/>
 		</head>
 		<body class="min-h-screen bg-slate-900 text-white">
 			{ children... }

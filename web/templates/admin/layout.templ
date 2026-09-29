@@ -11,7 +11,7 @@ templ AdminLayout(title string, active string, csrf string) {
 			<aside class="hidden lg:flex w-64 shrink-0 flex-col border-r border-white/10 bg-black/70 sticky top-0 h-screen">
 				<div class="flex items-center gap-3 px-6 h-20 border-b border-white/10">
 					<img src="/static/images/logo.svg" alt="P.O.H" class="h-8 w-auto"/>
-					<span class="text-xs font-bold uppercase tracking-[0.25em] text-amber-400">Admin</span>
+					<span class="text-xs font-bold uppercase tracking-[0.25em] text-brand-400">Admin</span>
 				</div>
 				<nav class="flex-1 px-3 py-6 flex flex-col gap-1">
 					@AdminNavItem("/admin/dashboard", "Prehľad", active == "dashboard", "M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 14h7v6H4z")
@@ -38,12 +38,12 @@ templ AdminLayout(title string, active string, csrf string) {
 					<div class="flex items-center justify-between px-4 h-16">
 						<div class="flex items-center gap-2">
 							<img src="/static/images/logo.svg" alt="P.O.H" class="h-7 w-auto"/>
-							<span class="text-xs font-bold uppercase tracking-[0.25em] text-amber-400">Admin</span>
+							<span class="text-xs font-bold uppercase tracking-[0.25em] text-brand-400">Admin</span>
 						</div>
 						<div class="flex items-center gap-3">
 							<form method="POST" action="/admin/logout" hx-post="/admin/logout" hx-swap="none">
 								<input type="hidden" name="csrf_token" value={ csrf }/>
-								<button type="submit" class="text-xs font-semibold text-white/60 transition hover:text-amber-400 cursor-pointer">Odhlásiť</button>
+								<button type="submit" class="text-xs font-semibold text-white/60 transition hover:text-brand-400 cursor-pointer">Odhlásiť</button>
 							</form>
 							<a href="/" class="text-xs font-semibold text-white/60">Zobraziť web ↗</a>
 						</div>

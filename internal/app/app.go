@@ -29,6 +29,7 @@ type Deps struct {
 	LogsHandler       *admin.LogsHandler
 	ConcertsHandler   *admin.ConcertsHandler
 	VideosHandler     *admin.VideosHandler
+	MusicHandler      *admin.MusicHandler
 	AboutHandler      *admin.AboutHandler
 	SocialHandler     *admin.SocialHandler
 	OrganizersHandler *admin.OrganizersHandler
@@ -55,6 +56,14 @@ func NewMux(deps Deps) http.Handler {
 		http.StripPrefix("/uploads/", immutableFileServer(deps.UploadDir)),
 	)
 
+	// Browsers request /favicon.ico by default even when the page
+	// declares <link rel="icon">, so serve it explicitly instead
+	// of returning 404 (visible as a console error).
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		http.ServeFile(w, r, filepath.Join(staticDir(), "favicon.ico"))
+	})
+
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		today := concerts.Today()
 
@@ -73,6 +82,13 @@ func NewMux(deps Deps) http.Handler {
 		}
 
 		clipRows, err := deps.Queries.ListVideosOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
+		albumRows, err := deps.Queries.ListAlbumsOrdered(r.Context())
 		if err != nil {
 			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
 
@@ -111,6 +127,7 @@ func NewMux(deps Deps) http.Handler {
 				Videos:  clipRows,
 				About:   aboutRow,
 				Social:  socialRows,
+				Albums:  albumRows,
 				Contact: contactData,
 			}),
 		), w, r)
@@ -167,8 +184,15 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/music", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
-		renderTemplate(admintemplates.AdminMusic(csrf(r)), w, r)
+		deps.MusicHandler.ListPage(w, r)
 	}))
+
+	mux.HandleFunc("POST /admin/music", protected(deps.Auth, deps.MusicHandler.Create))
+	mux.HandleFunc("POST /admin/music/reorder", protected(deps.Auth, deps.MusicHandler.Reorder))
+	mux.HandleFunc("GET /admin/music/{id}", protected(deps.Auth, deps.MusicHandler.Row))
+	mux.HandleFunc("GET /admin/music/{id}/edit", protected(deps.Auth, deps.MusicHandler.EditForm))
+	mux.HandleFunc("PUT /admin/music/{id}", protected(deps.Auth, deps.MusicHandler.Update))
+	mux.HandleFunc("DELETE /admin/music/{id}", protected(deps.Auth, deps.MusicHandler.Delete))
 
 	mux.HandleFunc("GET /admin/concerts", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

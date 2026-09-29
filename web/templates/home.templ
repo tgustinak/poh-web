@@ -5,15 +5,25 @@ templ Home(data HomeData) {
 		@Navigation()
 		<!-- hero -->
 		<section id="domov" class="relative min-h-screen flex flex-col overflow-hidden bg-black">
-			<img
-				src="/static/images/hero.jpg"
-				alt="Kapela P.O.H na pódiu"
-				class="hero-kenburns absolute inset-0 w-full h-full object-cover"
-				loading="eager"
-				fetchpriority="high"
-			/>
-			<div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-black/70"></div>
-			<div class="absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%)"></div>
+			<picture class="hero-kenburns absolute inset-0 w-full h-full">
+				<source
+					type="image/webp"
+					srcset="/static/images/hero-768.webp 768w, /static/images/hero-1280.webp 1280w, /static/images/hero-1920.webp 1920w"
+					sizes="100vw"
+				/>
+				<img
+					src="/static/images/hero-1920.jpg"
+					srcset="/static/images/hero-768.jpg 768w, /static/images/hero-1280.jpg 1280w, /static/images/hero-1920.jpg 1920w"
+					sizes="100vw"
+					alt="Kapela P.O.H na večernom koncerte – stage v modrom svetle pred davom"
+					class="h-full w-full object-cover"
+					style="object-position: center 38%"
+					loading="eager"
+					fetchpriority="high"
+				/>
+			</picture>
+			<div class="absolute inset-0 bg-gradient-to-b from-black/75 via-black/40 to-black/85"></div>
+			<div class="absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%)"></div>
 			<div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-neutral-950 to-transparent"></div>
 			<div class="relative z-10 flex flex-1 flex-col items-center justify-center text-center px-4 pt-20">
 				<img
@@ -22,14 +32,14 @@ templ Home(data HomeData) {
 					class="hero-enter hero-float w-72 sm:w-80 md:w-96 h-auto drop-shadow-[0_10px_40px_rgba(0,0,0,0.9)]"
 				/>
 				<div class="hero-enter mt-8 flex items-center gap-4 sm:gap-5" style="animation-delay:250ms">
-					<span class="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent to-amber-400/70" aria-hidden="true"></span>
-					<p class="text-center text-xs sm:text-sm md:text-base font-semibold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white/90">Folk-Rocková kapela z Dolného Kubína</p>
-					<span class="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent to-amber-400/70" aria-hidden="true"></span>
+					<span class="h-px w-8 sm:w-16 bg-gradient-to-r from-transparent to-brand-400/70" aria-hidden="true"></span>
+					<p class="text-center text-xs sm:text-sm md:text-base font-semibold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white/90">Folk-Rocková kapela z&nbsp;Dolného Kubína</p>
+					<span class="h-px w-8 sm:w-16 bg-gradient-to-l from-transparent to-brand-400/70" aria-hidden="true"></span>
 				</div>
 			</div>
 		</section>
 		<!-- music -->
-		@Music()
+		@Music(data.Music.Albums, data.Music.Spotify)
 		<!-- concerts -->
 		@Concerts(data.Concerts)
 		<!-- merch -->

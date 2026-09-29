@@ -96,7 +96,7 @@ templ AdminVideoRow(v db.Video, pos int) {
 }
 
 templ AdminVideoEditRow(v db.Video, errMsg string) {
-	<tr class="border-t border-amber-400/40 bg-amber-400/[0.04]" data-id={ strconv.FormatInt(v.ID, 10) }>
+	<tr class="border-t border-brand-400/40 bg-brand-400/[0.04]" data-id={ strconv.FormatInt(v.ID, 10) }>
 		<td colspan="5" class="px-4 py-4">
 			if errMsg != "" {
 				<p role="alert" class="mb-3 text-sm font-semibold text-red-300">{ errMsg }</p>

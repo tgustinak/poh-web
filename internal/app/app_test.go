@@ -73,6 +73,7 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer, string) {
 		LogsHandler:       admin.NewLogsHandler(logs),
 		ConcertsHandler:   admin.NewConcertsHandler(queries),
 		VideosHandler:     admin.NewVideosHandler(queries),
+		MusicHandler:      admin.NewMusicHandler(queries, uploadDir),
 		AboutHandler:      admin.NewAboutHandler(queries),
 		SocialHandler:     admin.NewSocialHandler(queries),
 		OrganizersHandler: admin.NewOrganizersHandler(queries, uploadDir),
@@ -532,7 +533,7 @@ func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
 		t.Fatal("expected all scripts after the last section")
 	}
 
-	for _, want := range []string{"past-accordion", "klipPlay", "merchShow", "pohConsentAccept", "sectionObserver"} {
+	for _, want := range []string{"past-accordion", "klipPlay", "merchShow", "pohConsentAccept", "sectionObserver", "albumScroll"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected flushed script %q in home page", want)
 		}
@@ -1517,6 +1518,179 @@ func scrapePhotoID(t *testing.T, body, alt string) string {
 	})
 	if end <= 0 {
 		t.Fatalf("expected numeric photo id, got %q", body)
+	}
+
+	return rest[:end]
+}
+
+// TestHomeShowsSeededMusic verifies the public music section is DB-driven:
+// seeded albums and the Spotify player render on the home page.
+func TestHomeShowsSeededMusic(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp, err := client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{
+		"Život",
+		"Na konci sveta",
+		"Obal albumu Život (2026)",
+		"open.spotify.com/embed/artist/79t3KrQngTRDooegKsR4cw",
+		"Prehrať na Spotify",
+		`id="album-carousel"`,
+		`aria-roledescription="carousel"`,
+		`onclick="albumScroll(-1)"`,
+		`onclick="albumScroll(1)"`,
+		`album-fade-r`,
+		`scroll-pt-3 scroll-px-1`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected home to contain %q", want)
+		}
+	}
+}
+
+// TestAdminMusicFlow covers album management end to end:
+// login -> create album with cover -> visible on web ->
+// Social Spotify update rewrites player and links -> delete -> gone.
+func TestAdminMusicFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	resp, err := client.Get(server.URL + "/admin/music")
+	if err != nil {
+		t.Fatalf("get admin music: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "album-create-form") {
+		t.Fatal("expected album create form in admin")
+	}
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+
+	cover, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "images", "album-na-konci-sveta.jpg"))
+	if err != nil {
+		t.Fatalf("read seed cover: %v", err)
+	}
+
+	req := organizersMultipart(t, http.MethodPost, server.URL+"/admin/music",
+		map[string]organizerTestFile{"cover": {"obal.jpg", cover}},
+		url.Values{"title": {"E2E album"}, "year": {"2025"}, "badge": {"E2E"}, "is_new": {"1"}},
+		csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post album: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected create 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "E2E album") {
+		t.Fatal("expected new album to appear on home page")
+	}
+
+	// Spotify URL in Social rewrites the music embed and all links.
+	form := url.Values{
+		"handle": {"P.O.H"},
+		"url":    {"https://open.spotify.com/artist/dQw4w9WgXcQdQw4w9WgXcQ1"},
+	}
+	putReq, err := http.NewRequest(http.MethodPut, server.URL+"/admin/social/spotify", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	putReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	putReq.Header.Set("HX-Request", "true")
+	putReq.Header.Set(auth.CsrfHeaderName, csrf)
+
+	resp, err = client.Do(putReq)
+	if err != nil {
+		t.Fatalf("put social spotify: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected social update 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	if body := readBody(t, resp); !strings.Contains(body, "open.spotify.com/embed/artist/dQw4w9WgXcQdQw4w9WgXcQ1") {
+		t.Fatal("expected updated Spotify embed on home page")
+	}
+
+	// Scrape the album id from the admin list and delete it.
+	resp, err = client.Get(server.URL + "/admin/music")
+	if err != nil {
+		t.Fatalf("get admin music: %v", err)
+	}
+
+	id := scrapeAlbumID(t, readBody(t, resp), "E2E album")
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, server.URL+"/admin/music/"+id, nil)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	deleteReq.Header.Set("HX-Request", "true")
+	deleteReq.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete album: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after delete: %v", err)
+	}
+
+	if body := readBody(t, resp); strings.Contains(body, "E2E album") {
+		t.Fatal("expected deleted album to disappear from home page")
+	}
+}
+
+func scrapeAlbumID(t *testing.T, body, title string) string {
+	t.Helper()
+
+	anchor := strings.Index(body, title)
+	if anchor < 0 {
+		t.Fatalf("expected album %q in admin list", title)
+	}
+
+	const prefix = `hx-delete="/admin/music/`
+	idx := strings.Index(body[anchor:], prefix)
+	if idx < 0 {
+		t.Fatalf("expected delete button for %q", title)
+	}
+
+	rest := body[anchor+idx+len(prefix):]
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+	if end <= 0 {
+		t.Fatalf("expected numeric album id, got %q", body)
 	}
 
 	return rest[:end]

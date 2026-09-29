@@ -16,6 +16,18 @@ type About struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Album struct {
+	ID        int64     `json:"id"`
+	Title     string    `json:"title"`
+	Year      int64     `json:"year"`
+	Badge     string    `json:"badge"`
+	CoverPath string    `json:"cover_path"`
+	IsNew     int64     `json:"is_new"`
+	Position  int64     `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Concert struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`

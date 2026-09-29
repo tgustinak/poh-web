@@ -15,7 +15,7 @@ import "github.com/tgustinak/pohkapela.sk/internal/static"
 templ AdminScripts(csrf string) {
 	<script src={ static.URL("js/htmx.min.js") }></script>
 	<meta name="csrf-token" content={ csrf }/>
-	<div id="admin-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] text-center rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-black shadow-2xl"></div>
+	<div id="admin-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] text-center rounded-full bg-brand-400 px-6 py-3 text-sm font-bold text-black shadow-2xl"></div>
 	<script>
 		function adminToast(msg) {
 			const t = document.getElementById('admin-toast');

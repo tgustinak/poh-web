@@ -12,7 +12,7 @@ templ Organizers(c contact.Contact, docs []organizers.Document, photos []organiz
 				<a href="/" class="transition-transform duration-300 hover:scale-105">
 					<img src="/static/images/logo.svg" alt="P.O.H" class="h-10 w-auto"/>
 				</a>
-				<a href="/" class="text-sm font-semibold uppercase tracking-wider text-white/60 transition hover:text-amber-400">
+				<a href="/" class="text-sm font-semibold uppercase tracking-wider text-white/60 transition hover:text-brand-400">
 					← Späť na web
 				</a>
 			</div>
@@ -20,7 +20,7 @@ templ Organizers(c contact.Contact, docs []organizers.Document, photos []organiz
 		<main class="bg-neutral-950">
 			<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
 				<div class="max-w-2xl">
-					<p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Booking</p>
+					<p class="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400">Booking</p>
 					<h1 class="mt-3 text-4xl md:text-5xl font-bold tracking-wide text-white/90">Pre organizátorov</h1>
 					<p class="mt-4 text-white/60 leading-relaxed">
 						Chcete kapelu P.O.H na vašu akciu? Napíšte nám — radi prídeme zahrať.
@@ -31,32 +31,32 @@ templ Organizers(c contact.Contact, docs []organizers.Document, photos []organiz
 						<img
 							src={ c.PhotoPath }
 							alt={ c.Name + " – " + c.Role + " kapely P.O.H" }
-							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"
+							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-brand-400/60"
 							loading="lazy"
 						/>
 					} else {
 						<img
 							src="/static/images/manager.webp"
 							alt={ c.Name + " – " + c.Role + " kapely P.O.H" }
-							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-amber-400/60"
+							class="shrink-0 w-20 h-20 rounded-full object-cover ring-2 ring-brand-400/60"
 							loading="lazy"
 						/>
 					}
 					<div class="min-w-0 flex-1">
-						<p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/90">{ c.Role } • booking</p>
+						<p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-400/90">{ c.Role } • booking</p>
 						<p class="mt-1 text-lg font-bold text-white">{ c.Name }</p>
 					</div>
 					<div class="flex flex-wrap gap-3">
-						<a href={ "tel:" + c.Phone } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
+						<a href={ "tel:" + c.Phone } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-brand-400 hover:text-brand-400">
 							{ contact.DisplayPhone(c.Phone) }
 						</a>
-						<a href={ "mailto:" + c.Email } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-amber-400 hover:text-amber-400">
+						<a href={ "mailto:" + c.Email } class="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-brand-400 hover:text-brand-400">
 							{ c.Email }
 						</a>
 					</div>
 				</div>
 				<div id="materialy" class="mt-16 max-w-4xl scroll-mt-24">
-					<p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">Na stiahnutie</p>
+					<p class="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400">Na stiahnutie</p>
 					<h2 class="mt-3 text-3xl font-bold tracking-wide text-white/90">Materiály na stiahnutie</h2>
 					<div class="mt-8 flex flex-col gap-3">
 						for _, d := range docs {
@@ -72,7 +72,7 @@ templ Organizers(c contact.Contact, docs []organizers.Document, photos []organiz
 			</div>
 		</main>
 		@Footer() {
-			<a href="/" class="text-sm font-semibold text-white/60 transition hover:text-amber-400">Späť na hlavnú stránku →</a>
+			<a href="/" class="text-sm font-semibold text-white/60 transition hover:text-brand-400">Späť na hlavnú stránku →</a>
 		}
 		@ConsentBanner()
 	}
@@ -82,9 +82,9 @@ templ DownloadRow(href string, name string, meta string) {
 	<a
 		href={ href }
 		download
-		class="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition hover:border-amber-400/50"
+		class="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition hover:border-brand-400/50"
 	>
-		<span class="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg bg-amber-400/10 text-amber-400 transition group-hover:bg-amber-400 group-hover:text-black">
+		<span class="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg bg-brand-400/10 text-brand-400 transition group-hover:bg-brand-400 group-hover:text-black">
 			<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V7l-5-5z"></path>
 				<path d="M14 2v5h5"></path>
@@ -94,7 +94,7 @@ templ DownloadRow(href string, name string, meta string) {
 			<span class="block font-semibold text-white">{ name }</span>
 			<span class="mt-0.5 block text-xs uppercase tracking-wider text-white/40">{ meta }</span>
 		</span>
-		<span class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/70 transition group-hover:border-amber-400 group-hover:text-amber-400">
+		<span class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/70 transition group-hover:border-brand-400 group-hover:text-brand-400">
 			Stiahnuť
 			<span aria-hidden="true">↓</span>
 		</span>
@@ -114,7 +114,7 @@ templ PhotoCard(preview string, href string, alt string, meta string) {
 			<a
 				href={ href }
 				download
-				class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/70 transition hover:border-amber-400 hover:text-amber-400"
+				class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/70 transition hover:border-brand-400 hover:text-brand-400"
 			>
 				Plná kvalita
 				<span aria-hidden="true">↓</span>

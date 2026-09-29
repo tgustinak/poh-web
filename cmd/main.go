@@ -69,6 +69,7 @@ func main() {
 		LogsHandler:       admin.NewLogsHandler(logs),
 		ConcertsHandler:   admin.NewConcertsHandler(queries),
 		VideosHandler:     admin.NewVideosHandler(queries),
+		MusicHandler:      admin.NewMusicHandler(queries, cfg.UploadDir),
 		AboutHandler:      admin.NewAboutHandler(queries),
 		SocialHandler:     admin.NewSocialHandler(queries),
 		OrganizersHandler: admin.NewOrganizersHandler(queries, cfg.UploadDir),
