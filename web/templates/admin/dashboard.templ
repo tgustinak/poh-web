@@ -8,7 +8,6 @@ templ AdminDashboard(csrf string, upcomingConcerts int64) {
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			@AdminDashCard("/admin/music", "Hudba", "2 albumy", "Diskografia v sekcii Hudba")
 			@AdminDashCard("/admin/concerts", "Koncerty", concertCountLabel(upcomingConcerts), "Nadchádzajúce termíny")
-			@AdminDashCard("/admin/merch", "Merch", "1 produkt", "Tričko Život")
 			@AdminDashCard("/admin/videos", "Klipy", "9 videí", "YouTube playlist")
 			@AdminDashCard("/admin/about", "O nás", "Text + citát", "Text sekcie O nás")
 			@AdminDashCard("/admin/social", "Social", "6 sietí", "Linky na sociálne siete")

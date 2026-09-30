@@ -206,12 +206,6 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("PUT /admin/concerts/{id}", protected(deps.Auth, deps.ConcertsHandler.Update))
 	mux.HandleFunc("DELETE /admin/concerts/{id}", protected(deps.Auth, deps.ConcertsHandler.Delete))
 
-	mux.HandleFunc("GET /admin/merch", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-
-		renderTemplate(admintemplates.AdminMerch(csrf(r)), w, r)
-	}))
-
 	mux.HandleFunc("GET /admin/videos", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 

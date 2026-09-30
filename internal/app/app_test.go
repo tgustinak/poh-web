@@ -533,7 +533,7 @@ func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
 		t.Fatal("expected all scripts after the last section")
 	}
 
-	for _, want := range []string{"past-accordion", "klipPlay", "merchShow", "pohConsentAccept", "sectionObserver", "albumScroll"} {
+	for _, want := range []string{"past-accordion", "klipPlay", "pohConsentAccept", "sectionObserver", "albumScroll"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected flushed script %q in home page", want)
 		}
