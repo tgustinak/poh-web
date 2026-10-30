@@ -35,7 +35,9 @@ templ Navigation() {
 				<button
 					id="mobile-menu-btn"
 					class="lg:hidden relative z-10 w-10 h-10 flex items-center justify-center text-white focus:outline-none"
-					aria-label="Toggle menu"
+					aria-label="Otvoriť menu"
+					aria-expanded="false"
+					aria-controls="mobile-menu"
 				>
 					<span id="hamburger-icon" class="block">
 						<span class="block w-6 h-0.5 bg-white mb-1.5 transition-all duration-300 origin-center"></span>
@@ -91,6 +93,8 @@ templ NavigationScripts() {
 			isMenuOpen = open;
 			mobileMenu?.classList.toggle('hidden', !open);
 			document.body.classList.toggle('overflow-hidden', open);
+			mobileMenuBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+			mobileMenuBtn?.setAttribute('aria-label', open ? 'Zavrieť menu' : 'Otvoriť menu');
 			hamburgerSpans[0]?.classList.toggle('rotate-45', open);
 			hamburgerSpans[0]?.classList.toggle('translate-y-2', open);
 			hamburgerSpans[1]?.classList.toggle('opacity-0', open);

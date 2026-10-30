@@ -4,6 +4,7 @@
 package app
 
 import (
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"runtime"
@@ -41,6 +42,36 @@ type Deps struct {
 // in the request logging middleware.
 func NewMux(deps Deps) http.Handler {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		if err := healthCheck(r, deps); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "unhealthy"})
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = w.Write([]byte("User-agent: *\nAllow: /\nSitemap: https://pohkapela.sk/sitemap.xml\n"))
+	})
+
+	mux.HandleFunc("GET /sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>` +
+			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+			`<url><loc>https://pohkapela.sk/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>` +
+			`<url><loc>https://pohkapela.sk/pre-organizatorov</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>` +
+			`</urlset>`))
+	})
 
 	mux.Handle(
 		"/static/",
@@ -335,6 +366,16 @@ func cacheControlFileServer(dir, cache string) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		fs.ServeHTTP(w, r)
 	})
+}
+
+func healthCheck(r *http.Request, deps Deps) error {
+	ctx := r.Context()
+
+	if _, err := deps.Queries.CountUsers(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func renderTemplate(t templ.Component, w http.ResponseWriter, r *http.Request) {

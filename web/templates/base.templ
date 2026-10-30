@@ -7,19 +7,36 @@ import (
 
 templ Base(title string) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="sk">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title }</title>
+			<meta name="description" content="P.O.H – folk-rocková kapela z Dolného Kubína. Hudba, koncerty, videoklipy a kontakt pre organizátorov."/>
+			<link rel="canonical" href="https://pohkapela.sk/"/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:site_name" content="P.O.H"/>
+			<meta property="og:title" content="P.O.H – folk-rocková kapela z Dolného Kubína"/>
+			<meta property="og:description" content="Hudba, koncerty, videoklipy a kontakt pre organizátorov."/>
+			<meta property="og:url" content="https://pohkapela.sk/"/>
+			<meta property="og:image" content="https://pohkapela.sk/static/images/hero-1280.jpg"/>
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="twitter:title" content="P.O.H – folk-rocková kapela"/>
+			<meta name="twitter:description" content="Hudba, koncerty, videoklipy a kontakt pre organizátorov."/>
+			<meta name="twitter:image" content="https://pohkapela.sk/static/images/hero-1280.jpg"/>
+			<link rel="preload" as="image" href="/static/images/hero-1280.webp" imagesrcset="/static/images/hero-768.webp 768w, /static/images/hero-1280.webp 1280w, /static/images/hero-1920.webp 1920w" imagesizes="100vw" fetchpriority="high"/>
 			<link rel="stylesheet" href={ static.URL("css/output.css") }/>
 			<link rel="icon" type="image/svg+xml" href={ static.URL("images/favicon.svg") }/>
 			<link rel="alternate icon" type="image/png" href={ static.URL("images/favicon-32x32.png") }/>
 			<link rel="apple-touch-icon" href={ static.URL("images/apple-touch-icon.png") }/>
 			<link rel="manifest" href={ static.URL("site.webmanifest") }/>
 			<meta name="theme-color" content="#09090b"/>
+			<script type="application/ld+json">
+				{"@context":"https://schema.org","@type":"MusicGroup","name":"P.O.H","genre":"Folk-Rock","areaServed":"SK","url":"https://pohkapela.sk/"}
+			</script>
 		</head>
 		<body class="min-h-screen bg-slate-900 text-white">
+			<a href="#hudba" class="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-brand-400 focus:text-black focus:px-4 focus:py-2 focus:rounded-full focus:m-2">Preskočiť na obsah</a>
 			{ children... }
 			@scripts.Flush()
 		</body>

@@ -522,15 +522,16 @@ func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
 	body := readBody(t, resp)
 
 	// Deferred page scripts must render grouped right before </body>,
-	// not scattered between sections.
+	// not scattered between sections. Head scripts (JSON-LD, preload)
+	// are allowed, so only deferred body scripts are checked.
 	lastSection := strings.LastIndex(body, "</section>")
-	firstScript := strings.Index(body, "<script")
-	if firstScript < 0 {
-		t.Fatal("expected deferred scripts in home page")
+	if lastSection < 0 {
+		t.Fatal("expected sections in home page")
 	}
-
-	if firstScript < lastSection {
-		t.Fatal("expected all scripts after the last section")
+	afterSections := body[lastSection:]
+	firstScript := strings.Index(afterSections, "<script")
+	if firstScript < 0 {
+		t.Fatal("expected deferred scripts after the last section")
 	}
 
 	for _, want := range []string{"past-accordion", "klipPlay", "pohConsentAccept", "sectionObserver", "albumScroll"} {
