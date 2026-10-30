@@ -2,7 +2,7 @@
   "name": "pohkapela.sk",
   "private": true,
   "scripts": {
-    "css:build": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/output.css",
+    "css:build": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/output.css --minify",
     "css:watch": "npm run css:build -- --watch"
   },
   "devDependencies": {

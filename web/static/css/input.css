@@ -157,10 +157,6 @@
     animation: hero-fade-up 0.9s ease forwards, hero-float 7s ease-in-out 1.2s infinite;
   }
 
-  .hero-float {
-    animation: hero-fade-up 0.9s ease forwards, hero-float 7s ease-in-out 1.2s infinite;
-  }
-
   @keyframes hero-zoom {
     from {
       transform: scale(1);
