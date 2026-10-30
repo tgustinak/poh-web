@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -37,6 +38,10 @@ func (o NewServerOptions) withDefaults() NewServerOptions {
 		o.IdleTimeout = defaultIdleTimeout
 	}
 
+	if o.GracefulShutdownTimeout <= 0 {
+		o.GracefulShutdownTimeout = 10 * time.Second
+	}
+
 	return o
 }
 
@@ -53,7 +58,7 @@ func (s *Server) Mount(pattern string, handler http.Handler) {
 
 func (s *Server) Start() {
 	quitCh := make(chan os.Signal, 1)
-	signal.Notify(quitCh, os.Interrupt)
+	signal.Notify(quitCh, os.Interrupt, syscall.SIGTERM)
 
 	srv := &http.Server{
 		Addr:         s.options.Port,
@@ -74,9 +79,9 @@ func (s *Server) Start() {
 
 	<-quitCh
 
-	slog.Info("server shutting down", "drain_timeout_s", s.options.GracefulShutdownTimeout)
+	slog.Info("server shutting down", "drain_timeout", s.options.GracefulShutdownTimeout)
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.options.GracefulShutdownTimeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), s.options.GracefulShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {

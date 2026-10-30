@@ -52,13 +52,14 @@ func main() {
 	seedAdmin(ctx, authSvc, cfg)
 
 	shutdownTimeout, err := strconv.Atoi(cfg.ForceShutdownAfterInSeconds)
-	if err != nil {
-		slog.Error("unable to convert force shutdown to number", "error", err)
+	if err != nil || shutdownTimeout <= 0 {
+		slog.Warn("invalid FORCE_SHUTDOWN_AFTER_IN_SECONDS, using default 10s", "value", cfg.ForceShutdownAfterInSeconds)
+		shutdownTimeout = 10
 	}
 
 	srv := server.NewServer(server.NewServerOptions{
 		Port:                    cfg.Port,
-		GracefulShutdownTimeout: time.Duration(shutdownTimeout),
+		GracefulShutdownTimeout: time.Duration(shutdownTimeout) * time.Second,
 	})
 
 	srv.Mount("/", app.NewMux(app.Deps{
