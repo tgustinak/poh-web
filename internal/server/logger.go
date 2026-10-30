@@ -11,7 +11,7 @@ import (
 // duration). Static asset requests are skipped to keep logs readable.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/static/") {
+		if strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/uploads/") {
 			next.ServeHTTP(w, r)
 
 			return

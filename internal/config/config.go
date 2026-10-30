@@ -21,6 +21,13 @@ type Config struct {
 	AdminPassword               string
 	LogLevel                    string
 	ForceShutdownAfterInSeconds string
+	// BehindProxy must be true when the app runs behind a reverse proxy
+	// terminating TLS. It enables X-Forwarded-Proto handling for
+	// Secure cookies and logging.
+	BehindProxy bool
+	// CookieSecure forces Secure on session/CSRF cookies. Use "always"
+	// in production behind HTTPS, "auto" (default) follows the request.
+	CookieSecure string
 }
 
 // Load reads .env (if present) and returns Config with defaults.
@@ -35,6 +42,8 @@ func Load() Config {
 		AdminPassword:               os.Getenv("ADMIN_PASSWORD"),
 		LogLevel:                    getenv("LOG_LEVEL", "info"),
 		ForceShutdownAfterInSeconds: getenv("FORCE_SHUTDOWN_AFTER_IN_SECONDS", "10"),
+		BehindProxy:                 getenv("BEHIND_PROXY", "false") == "true",
+		CookieSecure:                getenv("COOKIE_SECURE", "auto"),
 	}
 }
 
@@ -68,6 +77,10 @@ func (c Config) Validate() error {
 
 	if _, err := ParseLogLevel(c.LogLevel); err != nil {
 		return err
+	}
+
+	if c.CookieSecure != "" && c.CookieSecure != "auto" && c.CookieSecure != "always" && c.CookieSecure != "never" {
+		return fmt.Errorf("invalid COOKIE_SECURE %q: expected auto, always or never", c.CookieSecure)
 	}
 
 	return nil

@@ -13,12 +13,24 @@ import (
 
 // AuthHandler serves admin login, logout and session-aware redirects.
 type AuthHandler struct {
-	auth *auth.Service
+	auth        *auth.Service
+	limiter     *auth.LoginRateLimiter
+	behindProxy bool
 }
 
 // NewAuthHandler creates an admin auth handler.
 func NewAuthHandler(authSvc *auth.Service) *AuthHandler {
-	return &AuthHandler{auth: authSvc}
+	return NewAuthHandlerWithLimiter(authSvc, auth.DefaultLoginRateLimiter(), false)
+}
+
+// NewAuthHandlerWithLimiter creates a handler with explicit limiter/proxy
+// config (used by production wiring and tests).
+func NewAuthHandlerWithLimiter(authSvc *auth.Service, limiter *auth.LoginRateLimiter, behindProxy bool) *AuthHandler {
+	if limiter == nil {
+		limiter = auth.DefaultLoginRateLimiter()
+	}
+
+	return &AuthHandler{auth: authSvc, limiter: limiter, behindProxy: behindProxy}
 }
 
 // LoginPage renders the login form, redirecting already logged-in admins
@@ -47,6 +59,24 @@ func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 // on success and a showToast trigger on failure; plain form posts get
 // full-page responses.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	// Cap login body to 1MB before parsing (credential fields are tiny).
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	ip := auth.ClientIP(r, h.behindProxy)
+	if h.limiter.Blocked(ip) {
+		slog.Warn("admin login rate-limited", "ip", ip)
+
+		if htmx.IsHtmxRequest(r) {
+			htmx.Toast(w, "Príliš veľa pokusov. Skús to znova o pár minút.")
+
+			return
+		}
+
+		http.Error(w, "Príliš veľa pokusov. Skús to znova o pár minút.", http.StatusTooManyRequests)
+
+		return
+	}
+
 	if err := r.ParseForm(); err != nil {
 		if htmx.IsHtmxRequest(r) {
 			htmx.Toast(w, "Nepodarilo sa spracovať formulár, skús to znova.")
@@ -75,7 +105,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	sessionToken, csrfToken, err := h.auth.Login(r.Context(), r.FormValue("email"), r.FormValue("password"))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			slog.Warn("admin login failed", "email", r.FormValue("email"))
+			slog.Warn("admin login failed", "ip", ip)
+
+			if locked := h.limiter.RecordFailure(ip); locked {
+				slog.Warn("admin login locked out", "ip", ip)
+			}
 
 			if htmx.IsHtmxRequest(r) {
 				htmx.Toast(w, "Nesprávny e-mail alebo heslo.")
@@ -94,6 +128,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.limiter.Reset(ip)
 	auth.SetSessionCookie(w, r, sessionToken)
 	auth.SetCsrfCookie(w, r, csrfToken)
 	htmx.Redirect(w, r, "/admin/dashboard")

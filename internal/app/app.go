@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/tgustinak/pohkapela.sk/internal/admin"
@@ -45,7 +46,7 @@ func NewMux(deps Deps) http.Handler {
 		"/static/",
 		http.StripPrefix(
 			"/static/",
-			http.FileServer(http.Dir(staticDir())),
+			cacheControlFileServer(staticDir(), "public, max-age=31536000, immutable"),
 		),
 	)
 
@@ -272,7 +273,7 @@ func NewMux(deps Deps) http.Handler {
 		deps.LogsHandler.LogsEntries(w, r)
 	}))
 
-	return server.Logger(withScriptCollector(mux))
+	return server.SecurityHeaders(server.Logger(withScriptCollector(mux)))
 }
 
 // withScriptCollector scopes a scripts stack to the request, so page
@@ -315,6 +316,23 @@ func immutableFileServer(dir string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// PDFs are served as downloads to avoid inline polyglot XSS.
+		if strings.HasSuffix(strings.ToLower(r.URL.Path), ".pdf") {
+			w.Header().Set("Content-Disposition", "attachment")
+			w.Header().Set("X-Download-Options", "noopen")
+		}
+		fs.ServeHTTP(w, r)
+	})
+}
+
+// cacheControlFileServer serves static assets with explicit caching.
+func cacheControlFileServer(dir, cache string) http.Handler {
+	fs := http.FileServer(http.Dir(dir))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", cache)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		fs.ServeHTTP(w, r)
 	})
 }

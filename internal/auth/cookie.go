@@ -12,15 +12,58 @@ const CookieName = "poh_session"
 // (double-submit with the login form) and the session-bound one after.
 const CsrfCookieName = "poh_csrf"
 
+// cookieConfig is set once at boot from env (see ConfigureCookies).
+// BehindProxy enables X-Forwarded-Proto handling for deployments
+// where TLS is terminated by a reverse proxy in front of the Go app.
+var cookieBehindProxy bool
+
+var cookieSecureMode = "auto"
+
+// ConfigureCookies sets proxy/secure behavior for session cookies.
+// Call once from main after config.Load. Mode is auto|always|never.
+func ConfigureCookies(behindProxy bool, secureMode string) {
+	cookieBehindProxy = behindProxy
+
+	if secureMode != "" {
+		cookieSecureMode = secureMode
+	}
+}
+
+// isSecureRequest reports whether the original client request used HTTPS,
+// including via X-Forwarded-Proto when behind a trusted proxy.
+func isSecureRequest(r *http.Request) bool {
+	if cookieSecureMode == "always" {
+		return true
+	}
+
+	if cookieSecureMode == "never" {
+		return false
+	}
+
+	if r.TLS != nil {
+		return true
+	}
+
+	if cookieBehindProxy {
+		proto := r.Header.Get("X-Forwarded-Proto")
+		if proto == "https" {
+			return true
+		}
+	}
+
+	return false
+}
+
 // SetSessionCookie stores the raw session token in an HttpOnly cookie.
-// Secure is enabled automatically for HTTPS requests.
+// Secure follows the request (or X-Forwarded-Proto behind a proxy,
+// or COOKIE_SECURE=always in production).
 func SetSessionCookie(w http.ResponseWriter, r *http.Request, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   isSecureRequest(r),
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().UTC().Add(SessionTTL),
 	})
@@ -73,7 +116,7 @@ func SetCsrfCookie(w http.ResponseWriter, r *http.Request, token string) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   isSecureRequest(r),
 		SameSite: http.SameSiteLaxMode,
 	})
 }

@@ -51,6 +51,8 @@ func main() {
 
 	seedAdmin(ctx, authSvc, cfg)
 
+	auth.ConfigureCookies(cfg.BehindProxy, cfg.CookieSecure)
+
 	shutdownTimeout, err := strconv.Atoi(cfg.ForceShutdownAfterInSeconds)
 	if err != nil || shutdownTimeout <= 0 {
 		slog.Warn("invalid FORCE_SHUTDOWN_AFTER_IN_SECONDS, using default 10s", "value", cfg.ForceShutdownAfterInSeconds)
@@ -66,7 +68,7 @@ func main() {
 		Auth:              authSvc,
 		Queries:           queries,
 		UploadDir:         cfg.UploadDir,
-		AuthHandler:       admin.NewAuthHandler(authSvc),
+		AuthHandler:       admin.NewAuthHandlerWithLimiter(authSvc, auth.DefaultLoginRateLimiter(), cfg.BehindProxy),
 		LogsHandler:       admin.NewLogsHandler(logs),
 		ConcertsHandler:   admin.NewConcertsHandler(queries),
 		VideosHandler:     admin.NewVideosHandler(queries),
