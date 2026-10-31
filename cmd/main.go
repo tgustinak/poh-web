@@ -77,6 +77,7 @@ func main() {
 		SocialHandler:     admin.NewSocialHandler(queries),
 		OrganizersHandler: admin.NewOrganizersHandler(queries, cfg.UploadDir),
 		ContactHandler:    admin.NewContactHandler(queries, cfg.UploadDir),
+		VPSHandler:        admin.NewVPSHandler(),
 	}))
 
 	srv.Start()

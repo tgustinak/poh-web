@@ -37,6 +37,7 @@ type Deps struct {
 	SocialHandler     *admin.SocialHandler
 	OrganizersHandler *admin.OrganizersHandler
 	ContactHandler    *admin.ContactHandler
+	VPSHandler        *admin.VPSHandler
 }
 
 // NewMux builds the full application route tree wrapped
@@ -303,6 +304,12 @@ func NewMux(deps Deps) http.Handler {
 		w.WriteHeader(http.StatusOK)
 
 		deps.LogsHandler.LogsEntries(w, r)
+	}))
+
+	mux.HandleFunc("GET /admin/vps", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+
+		deps.VPSHandler.VPSPage(w, r)
 	}))
 
 	return server.SecurityHeaders(server.Logger(withScriptCollector(mux)))

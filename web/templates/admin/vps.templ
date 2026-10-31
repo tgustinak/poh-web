@@ -1,0 +1,26 @@
+package templates
+
+import "fmt"
+
+templ AdminVPS(csrf string, uptime string, load string, memUsed string, memTotal string, memPercent string, diskUsed string, diskTotal string, diskPercent string, goVersion string, goroutines string) {
+	@AdminLayout("VPS monitoring", "vps", csrf) {
+		@AdminPageHeader("VPS Monitoring", "Server health and resource usage")
+
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			@VPSCard("Uptime", uptime, "System has been running", "/admin/vps")
+			@VPSCard("Load avg", load, "CPU load (1 min)", "/admin/vps")
+			@VPSCard("Memory", memUsed+" / "+memTotal+" MB", memPercent+"% used", "/admin/vps")
+			@VPSCard("Disk", diskUsed+" / "+diskTotal+" GB", diskPercent+"% used", "/admin/vps")
+			@VPSCard("Go version", goVersion, "Runtime", "/admin/vps")
+			@VPSCard("Goroutines", goroutines, "Running", "/admin/vps")
+		</div>
+	}
+}
+
+templ VPSCard(title string, value string, sub string, href string) {
+	<a href={ href } class="admin-card group transition hover:border-brand-400/40">
+		<p class="text-2xl font-bold text-white group-hover:text-brand-400">{ title }</p>
+		<p class="mt-1 text-sm font-semibold text-brand-400/90">{ value }</p>
+		<p class="mt-1 text-sm text-white/50">{ sub }</p>
+	</a>
+}
