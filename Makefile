@@ -1,4 +1,6 @@
-.PHONY: build dev test validate sqlc templ seed db-reset
+.PHONY: build dev test validate sqlc templ seed db-reset import-concerts deploy
+
+DATABASE_PATH ?= ./data/app.db
 
 build:
 	go tool templ generate
@@ -34,7 +36,18 @@ sqlc:
 seed:
 	go run ./cmd/seed
 
+# Import the concert history from the old WordPress site.
+# Idempotent, safe to run repeatedly. Requires the sqlite3 CLI.
+import-concerts:
+	sqlite3 "$(DATABASE_PATH)" < db/imports/legacy_concerts.sql
+
 # Delete the local dev database (migrations re-run on next boot).
 # Dev only: never run against production data.
 db-reset:
 	rm -f ./data/app.db*
+
+# Deploy to the VPS. Requires an SSH alias 'deploy-host' in your ssh config
+# and the VPS deploy wrapper (/usr/local/bin/deploy-wrapper) set up.
+# See the internal setup notes for full instructions.
+deploy:
+	./scripts/deploy.sh

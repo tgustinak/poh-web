@@ -6,6 +6,7 @@ package app
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -334,8 +335,12 @@ func csrf(r *http.Request) string {
 // so the mux works regardless of the process working directory
 // (e.g. when tests run from the package directory).
 func staticDir() string {
-	_, file, _, _ := runtime.Caller(0)
+	// Allow override via environment variable for production deployments
+	if dir := os.Getenv("STATIC_DIR"); dir != "" {
+		return dir
+	}
 
+	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..", "web", "static")
 }
 

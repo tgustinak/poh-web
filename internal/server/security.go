@@ -19,7 +19,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; "+
 			"script-src 'self' 'unsafe-inline'; "+
 			"style-src 'self' 'unsafe-inline'; "+
-			"img-src 'self' data: https:; "+
+			"img-src 'self' data: blob: https:; "+
 			"media-src 'self' https:; "+
 			"font-src 'self' data:; "+
 			"connect-src 'self'; "+
