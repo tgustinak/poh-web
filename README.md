@@ -1,3 +1,5 @@
+[![CI](https://github.com/tgustinak/poh-web/actions/workflows/ci.yml/badge.svg)](https://github.com/tgustinak/poh-web/actions/workflows/ci.yml)
+
 # P.O.H - web
 
 P.O.H Webpage project.
