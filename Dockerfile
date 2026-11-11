@@ -1,15 +1,25 @@
 # syntax=docker/dockerfile:1
+
+# build css
+FROM node:22-bookworm-slim AS css
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY web ./web
+RUN npm run css:build
+
+
+# build go app
 FROM golang:1.26-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
- && npm ci \
- && go run github.com/a-h/templ/cmd/templ@v0.3.1020 generate \
- && npm run css:build \
- && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/main.go
+COPY --from=css /src/web/static/css/output.css web/static/css/output.css
+RUN go tool templ generate && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/main.go
 
+
+# runtime
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /srv
 COPY --from=build /out/app /srv/app
