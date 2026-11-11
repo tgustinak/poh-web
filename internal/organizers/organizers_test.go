@@ -44,14 +44,11 @@ func TestValidateAlt(t *testing.T) {
 }
 
 func TestDetectDocument(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "files", "poh-rider.pdf"))
-	if err != nil {
-		t.Fatalf("read seed pdf: %v", err)
-	}
+	data := []byte("%PDF-1.4\n%test document\n")
 
 	ext, ok := DetectDocument(data)
 	if !ok || ext != ".pdf" {
-		t.Fatalf("expected seed rider to detect as pdf, got %q, %v", ext, ok)
+		t.Fatalf("expected pdf bytes to detect as pdf, got %q, %v", ext, ok)
 	}
 
 	if _, ok := DetectDocument([]byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 'J', 'F', 'I', 'F'}); ok {
