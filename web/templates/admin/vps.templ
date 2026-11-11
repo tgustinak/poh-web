@@ -1,7 +1,5 @@
 package templates
 
-import "fmt"
-
 templ AdminVPS(csrf string, uptime string, load string, memUsed string, memTotal string, memPercent string, diskUsed string, diskTotal string, diskPercent string, goVersion string, goroutines string) {
 	@AdminLayout("VPS monitoring", "vps", csrf) {
 		@AdminPageHeader("VPS Monitoring", "Server health and resource usage")

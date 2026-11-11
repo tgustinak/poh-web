@@ -46,8 +46,6 @@ import-concerts:
 db-reset:
 	rm -f ./data/app.db*
 
-# Deploy to the VPS. Requires an SSH alias 'deploy-host' in your ssh config
-# and the VPS deploy wrapper (/usr/local/bin/deploy-wrapper) set up.
-# See the internal setup notes for full instructions.
+# Deploy to the server. Configuration lives in the git-ignored .deploy.env.
 deploy:
 	./scripts/deploy.sh

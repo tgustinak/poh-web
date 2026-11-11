@@ -19,7 +19,7 @@ CREATE TABLE contact (
 INSERT INTO contact (id, name, role, phone, email, photo_path) VALUES (
   1,
   'Jana Testová',
-  'Manažérka',
+  'Manažér',
   '+421900123456',
   'kontakt@example.com',
   ''

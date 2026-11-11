@@ -45,8 +45,8 @@ func (h *VPSHandler) VPSPage(w http.ResponseWriter, r *http.Request) {
 
 func collectStats() map[string]string {
 	s := map[string]string{
-		"go_version":  runtime.Version(),
-		"goroutines":  strconv.Itoa(runtime.NumGoroutine()),
+		"go_version": runtime.Version(),
+		"goroutines": strconv.Itoa(runtime.NumGoroutine()),
 	}
 
 	// Uptime from /proc/uptime

@@ -1,42 +1,33 @@
 #!/usr/bin/env bash
 #
-# pohkapela.sk — simple deploy script (run from your Mac)
+# Simple deploy script (run from your workstation).
 #
-# Builds the Go binary + CSS locally, copies to the VPS, restarts the service.
-#
-# Prerequisites:
-#   - SSH alias 'deploy-host' in your ssh config pointing to your VPS
-#   - Go toolchain and Node.js/npm installed locally
-#   - On VPS: /usr/local/bin/deploy-wrapper wrapper + sudoers rule
-#
-# Usage:
-#   chmod +x scripts/deploy.sh
-#   ./scripts/deploy.sh
+# Builds the Go binary + CSS locally, uploads them and runs the remote
+# deploy command. All environment-specific values come from a local,
+# git-ignored `.deploy.env` file (or the environment). Required variables:
+#   DEPLOY_HOST        SSH destination (e.g. an alias from your ssh config)
+#   DEPLOY_REMOTE_CMD  command executed on the server to install + restart
+#   DEPLOY_BIN_TMP     remote temp path for the uploaded binary
+#   DEPLOY_STATIC_TMP  remote temp path for the uploaded static assets
+# Optional:
+#   DEPLOY_TEST_URL    URL printed at the end for a manual smoke test
 #
 set -euo pipefail
 
-###############################################################################
-# Configuration
-###############################################################################
-VPS_HOST="deploy-host" # must match a Host entry in your ssh config
-REMOTE_BIN_TMP="/tmp/pohkapela-app"
-REMOTE_STATIC_TMP="~/pohkapela-static"
-REMOTE_BIN="/opt/app/app"
-REMOTE_STATIC_DIR="/opt/app/web/static"
+[[ -f .deploy.env ]] && source .deploy.env
+
+: "${DEPLOY_HOST:?DEPLOY_HOST is not set (see .deploy.env)}"
+: "${DEPLOY_REMOTE_CMD:?DEPLOY_REMOTE_CMD is not set}"
+: "${DEPLOY_BIN_TMP:?DEPLOY_BIN_TMP is not set}"
+: "${DEPLOY_STATIC_TMP:?DEPLOY_STATIC_TMP is not set}"
 LOCAL_STATIC_DIR="web/static"
 
-###############################################################################
-# Helpers
-###############################################################################
 info() { echo "[deploy] $*"; }
 err() {
   echo "[deploy] ERROR: $*" >&2
   exit 1
 }
 
-###############################################################################
-# 1. Build
-###############################################################################
 info "Building CSS..."
 npm run css:build
 
@@ -45,28 +36,19 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
   -trimpath -ldflags="-s -w" \
   -o bin/app ./cmd/main.go
 
-if [[ ! -f bin/app ]]; then
-  err "Go build failed — bin/app not found"
-fi
+[[ -f bin/app ]] || err "Go build failed — bin/app not found"
 
-info "Build complete: $(file bin/app | sed 's/,.*//')"
-
-###############################################################################
-# 2. Copy files to VPS temp locations
-###############################################################################
-info "Copying binary to $VPS_HOST..."
-scp bin/app "${VPS_HOST}:${REMOTE_BIN_TMP}"
+info "Uploading binary..."
+scp bin/app "${DEPLOY_HOST}:${DEPLOY_BIN_TMP}"
 
 if [[ -d "${LOCAL_STATIC_DIR}" ]]; then
-  info "Copying static assets to $VPS_HOST..."
-  scp -r "${LOCAL_STATIC_DIR}/." "${VPS_HOST}:${REMOTE_STATIC_TMP}"
+  info "Uploading static assets..."
+  scp -r "${LOCAL_STATIC_DIR}/." "${DEPLOY_HOST}:${DEPLOY_STATIC_TMP}"
 fi
 
-###############################################################################
-# 3. Run deploy wrapper on VPS (handles install + statics + restart)
-###############################################################################
-info "Running deploy on VPS..."
-ssh "${VPS_HOST}" "sudo /usr/local/bin/deploy-wrapper"
+info "Running remote deploy..."
+ssh "${DEPLOY_HOST}" "${DEPLOY_REMOTE_CMD}"
 
-info "Deploy complete. App restarted."
-info "Test: curl -I https://staging.example.com/"
+info "Deploy complete."
+[[ -n "${DEPLOY_TEST_URL:-}" ]] && info "Test: curl -I ${DEPLOY_TEST_URL}"
+exit 0

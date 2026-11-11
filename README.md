@@ -36,53 +36,10 @@ make build
 
 ## Deployment
 
-The site runs on an server as a single static
-Go binary behind the proxy (TLS + reverse proxy). Full VPS setup instructions are
-in [`the internal setup notes`](the internal setup notes).
-
-### One-time local setup
-
-Add an SSH alias to `your ssh config` on your machine:
-
-```
-Host deploy-host
-    HostName <VPS_IP>
-    Port 22
-    User <USER>
-    IdentityFile <KEY_FILE>
-    IdentitiesOnly yes
-```
-
-### Deploying
-
-Build the Go binary + CSS and deploy to the VPS:
-
-```bash
-make deploy
-```
-
-This runs [`scripts/deploy.sh`](scripts/deploy.sh), which:
-1. Builds Tailwind CSS
-2. Cross-compiles the Go binary for Linux (`CGO_ENABLED=0`)
-3. Copies the binary and static assets to the VPS
-4. Restarts the `pohkapela` systemd service
-
-The VPS-side deploy wrapper (`/usr/local/bin/deploy-wrapper`) is run via
-passwordless sudo limited to that single script — see `the internal setup notes`.
-
-### Production environment
-
-The app reads `/opt/app/.env` on the VPS. Key production settings:
-
-```
-PORT=:8080
-DATABASE_PATH=/var/lib/app/app.db
-UPLOAD_DIR=/var/lib/app/uploads
-LOG_LEVEL=info
-BEHIND_PROXY=true
-COOKIE_SECURE=always
-STATIC_DIR=/opt/app/web/static
-```
+Deployment is done with `make deploy`, which runs `scripts/deploy.sh`. The
+target host and paths are read from a local, git-ignored `.deploy.env` file
+(see the variables listed at the top of the script). Production configuration
+is supplied through environment variables (see `.env.example`).
 
 ### Import concert history
 
@@ -95,7 +52,7 @@ production database):
 ```bash
 make import-concerts
 # or with an explicit database path:
-make import-concerts DATABASE_PATH=/var/lib/app/app.db
+make import-concerts DATABASE_PATH=/path/to/app.db
 # or directly:
 sqlite3 ./data/app.db < db/imports/legacy_concerts.sql
 ```
