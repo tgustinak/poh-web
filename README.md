@@ -71,3 +71,7 @@ Would be nice to have some mini app that would have these features:
 - you can add "extra" songs to the playlist
 - it would calculate the duration of the playlist
 - you can export the playlist to PDF for print
+
+## License
+
+All rights reserved. This repository is visible for viewing only; see [`LICENSE`](LICENSE). Reuse of any part of it requires written permission.
