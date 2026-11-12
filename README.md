@@ -8,7 +8,7 @@ P.O.H Webpage project.
 
 - `go:1.27.0`
 - `npm:11.16.0`
-- `node:v24.18.0`
+- `node:v24.22.1`
 
 ## Development
 
