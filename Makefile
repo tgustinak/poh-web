@@ -1,4 +1,4 @@
-.PHONY: build dev test validate sqlc templ seed db-reset import-concerts deploy
+.PHONY: build dev test validate templ sqlc seed import-concerts db-reset deploy
 
 DATABASE_PATH ?= ./data/app.db
 
