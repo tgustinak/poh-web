@@ -27,6 +27,12 @@ func URL(path string) string {
 }
 
 func staticDir() string {
+	// Production builds use -trimpath, which breaks the runtime.Caller
+	// lookup below, so deployments point at the real directory.
+	if dir := os.Getenv("STATIC_DIR"); dir != "" {
+		return dir
+	}
+
 	_, file, _, _ := runtime.Caller(0)
 
 	return filepath.Join(filepath.Dir(file), "..", "..", "web", "static")
