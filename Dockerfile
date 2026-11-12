@@ -17,6 +17,7 @@ RUN go mod download
 COPY . .
 COPY --from=css /src/web/static/css/output.css web/static/css/output.css
 RUN go tool templ generate && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/main.go
+RUN mkdir -p /out/data /out/data/uploads
 
 
 # runtime
@@ -24,7 +25,16 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /srv
 COPY --from=build /out/app /srv/app
 COPY --from=build /src/web/static /srv/web/static
-ENV PORT=:8080 DATABASE_PATH=/data/app.db UPLOAD_DIR=/data/uploads LOG_LEVEL=info FORCE_SHUTDOWN_AFTER_IN_SECONDS=10 BEHIND_PROXY=true COOKIE_SECURE=always
+ENV \
+  PORT=:8080 \
+  DATABASE_PATH=/data/app.db \
+  UPLOAD_DIR=/data/uploads \
+  STATIC_DIR=/srv/web/static \
+  LOG_LEVEL=info \
+  FORCE_SHUTDOWN_AFTER_IN_SECONDS=10 \
+  BEHIND_PROXY=true \
+  COOKIE_SECURE=always
+COPY --from=build --chown=nonroot:nonroot /out/data /data
 VOLUME ["/data"]
 EXPOSE 8080
 USER nonroot:nonroot
