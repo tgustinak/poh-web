@@ -45,6 +45,18 @@ type Contact struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type GalleryItem struct {
+	ID          int64     `json:"id"`
+	Kind        string    `json:"kind"`
+	FilePath    string    `json:"file_path"`
+	PreviewPath string    `json:"preview_path"`
+	YoutubeID   string    `json:"youtube_id"`
+	Title       string    `json:"title"`
+	Alt         string    `json:"alt"`
+	Position    int64     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type OrganizerDocument struct {
 	Slot        string    `json:"slot"`
 	DisplayName string    `json:"display_name"`
