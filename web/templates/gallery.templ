@@ -76,16 +76,16 @@ templ GalleryTile(item gallery.Item) {
 }
 
 templ GalleryLightbox() {
-	<dialog id="gallery-lightbox" class="w-[min(94vw,72rem)] max-w-none bg-transparent p-0 text-white backdrop:bg-black/90">
-		<div class="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70">
+	<dialog id="gallery-lightbox" class="m-auto w-[min(94vw,72rem)] max-w-none bg-transparent p-0 text-white backdrop:bg-black/90">
+		<div class="relative flex max-h-[92dvh] flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70">
 			<button type="button" onclick="pohGalleryClose()" aria-label="Zavrieť galériu" class="absolute right-3 top-3 z-20 flex items-center justify-center w-10 h-10 rounded-full bg-black/70 text-xl text-white/80 backdrop-blur transition hover:text-white cursor-pointer">×</button>
 			<button type="button" onclick="pohGalleryPrev()" aria-label="Predchádzajúca položka" class="absolute left-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/70 text-2xl text-white/80 backdrop-blur transition hover:text-white cursor-pointer">‹</button>
 			<button type="button" onclick="pohGalleryNext()" aria-label="Nasledujúca položka" class="absolute right-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/70 text-2xl text-white/80 backdrop-blur transition hover:text-white cursor-pointer">›</button>
-			<div class="relative bg-black">
-				<img id="gallery-lightbox-img" alt="" class="hidden max-h-[80vh] w-full object-contain"/>
-				<div id="gallery-lightbox-video" class="hidden aspect-video w-full"></div>
+			<div class="relative flex min-h-0 flex-1 items-center justify-center bg-black">
+				<img id="gallery-lightbox-img" alt="" class="hidden max-h-[calc(92dvh-4.5rem)] w-full object-contain"/>
+				<div id="gallery-lightbox-video" class="hidden aspect-video max-h-[calc(92dvh-4.5rem)] w-full"></div>
 			</div>
-			<p id="gallery-lightbox-caption" class="px-6 py-4 text-sm text-white/70"></p>
+			<p id="gallery-lightbox-caption" class="shrink-0 px-5 py-3 text-sm text-white/70 sm:px-6 sm:py-4"></p>
 		</div>
 	</dialog>
 }
@@ -220,6 +220,49 @@ templ GalleryScripts() {
 					dialog.close();
 				}
 			});
+
+			var swipeStartX = 0;
+			var swipeStartY = 0;
+			var swipeTracking = false;
+			var swipeThreshold = 50;
+
+			dialog.addEventListener('touchstart', function(e) {
+				if (e.touches.length !== 1 || items.length < 2) {
+					swipeTracking = false;
+					return;
+				}
+
+				var target = e.target;
+				if (video.contains(target) || (target.closest && target.closest('button'))) {
+					swipeTracking = false;
+					return;
+				}
+
+				swipeStartX = e.touches[0].clientX;
+				swipeStartY = e.touches[0].clientY;
+				swipeTracking = true;
+			}, { passive: true });
+
+			dialog.addEventListener('touchend', function(e) {
+				if (!swipeTracking) {
+					return;
+				}
+				swipeTracking = false;
+
+				var touch = e.changedTouches[0];
+				var dx = touch.clientX - swipeStartX;
+				var dy = touch.clientY - swipeStartY;
+
+				if (Math.abs(dx) < swipeThreshold || Math.abs(dx) < Math.abs(dy) * 1.2) {
+					return;
+				}
+
+				show(current + (dx < 0 ? 1 : -1));
+			}, { passive: true });
+
+			dialog.addEventListener('touchcancel', function() {
+				swipeTracking = false;
+			}, { passive: true });
 
 			document.addEventListener('keydown', function(e) {
 				if (!dialog.open) {
