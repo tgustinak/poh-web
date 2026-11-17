@@ -31,6 +31,8 @@ err() {
 info "Building CSS..."
 npm run css:build
 
+[[ -f web/static/css/output.css ]] || err "CSS build produced no web/static/css/output.css"
+
 info "Building Go binary for Linux..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
   -trimpath -ldflags="-s -w" \
@@ -47,7 +49,11 @@ if [[ -d "${LOCAL_STATIC_DIR}" ]]; then
 fi
 
 info "Running remote deploy..."
-ssh "${DEPLOY_HOST}" "${DEPLOY_REMOTE_CMD}"
+# Pass the static upload path explicitly: the remote script runs under sudo,
+# where $HOME is root's home, so its own default would point at the wrong
+# directory and silently skip the CSS sync. The remote login shell expands
+# the leading ~ before sudo starts.
+ssh "${DEPLOY_HOST}" "${DEPLOY_REMOTE_CMD} ${DEPLOY_STATIC_TMP}"
 
 info "Deploy complete."
 [[ -n "${DEPLOY_TEST_URL:-}" ]] && info "Test: curl -I ${DEPLOY_TEST_URL}"
