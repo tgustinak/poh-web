@@ -43,6 +43,12 @@ target host and paths are read from a local, git-ignored `.deploy.env` file
 (see the variables listed at the top of the script). Production configuration
 is supplied through environment variables (see `.env.example`).
 
+The remote side runs `/usr/local/bin/pohkapela-deploy`; install or update it
+from `scripts/remote-deploy.sh` (the header of that file shows the exact
+command). Keep the two versions in sync: the remote script refuses to deploy
+when the uploaded static assets are missing, which prevents the app from
+running with stale CSS.
+
 ### Import concert history
 
 The concerts from the old WordPress site are kept in

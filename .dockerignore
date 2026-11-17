@@ -4,6 +4,7 @@ tmp/
 bin/
 data/
 .env
+.deploy.env
 *.db
 *.db-shm
 *.db-wal

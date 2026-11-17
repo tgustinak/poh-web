@@ -33,7 +33,7 @@ templ Gallery(items []gallery.Item) {
 templ GalleryTile(item gallery.Item) {
 	<button
 		type="button"
-		class="gallery-tile group relative aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-neutral-900 text-left transition duration-300 hover:-translate-y-1 hover:border-brand-400/60 hover:shadow-2xl hover:shadow-black/60 cursor-pointer"
+		class="gallery-tile group relative block w-full overflow-hidden rounded-xl border border-white/10 bg-neutral-900 text-left transition duration-300 hover:-translate-y-1 hover:border-brand-400/60 hover:shadow-2xl hover:shadow-black/60 cursor-pointer"
 		data-gallery-item
 		data-kind={ item.Kind }
 		data-src={ item.FilePath }
@@ -46,7 +46,7 @@ templ GalleryTile(item gallery.Item) {
 		<img
 			src={ item.Thumbnail() }
 			alt={ item.DisplayTitle() }
-			class="absolute inset-0 w-full h-full object-cover transition duration-500 group-hover:scale-105"
+			class="block w-full aspect-[4/3] object-cover transition duration-500 group-hover:scale-105"
 			loading="lazy"
 			decoding="async"
 		/>
