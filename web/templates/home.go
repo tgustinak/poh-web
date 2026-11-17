@@ -5,6 +5,7 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/concerts"
 	"github.com/tgustinak/pohkapela.sk/internal/contact"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/gallery"
 	"github.com/tgustinak/pohkapela.sk/internal/music"
 	"github.com/tgustinak/pohkapela.sk/internal/social"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
@@ -17,6 +18,7 @@ type HomeData struct {
 	Concerts ConcertsData
 	Music    MusicData
 	Videos   []videos.Video
+	Gallery  []gallery.Item
 	About    about.About
 	Social   []social.Link
 	Contact  contact.Contact
@@ -42,6 +44,7 @@ type ConcertsData struct {
 type HomeParams struct {
 	Concerts ConcertsData
 	Videos   []db.Video
+	Gallery  []db.GalleryItem
 	About    db.About
 	Social   []db.SocialLink
 	// Contact is already resolved by admin.ContactHandler.GetContact,
@@ -70,6 +73,7 @@ func NewHomeData(p HomeParams) HomeData {
 			Spotify: music.SettingsFromSpotifyURL(spotifyURL),
 		},
 		Videos:  videos.FromDBMany(p.Videos),
+		Gallery: gallery.FromDBMany(p.Gallery),
 		About:   about.FromDB(p.About),
 		Social:  social.FromDBMany(p.Social),
 		Contact: p.Contact,

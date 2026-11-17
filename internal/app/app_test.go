@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"image/jpeg"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -73,6 +74,7 @@ func testServer(t *testing.T) (*httptest.Server, *logbuffer.Buffer, string) {
 		LogsHandler:       admin.NewLogsHandler(logs),
 		ConcertsHandler:   admin.NewConcertsHandler(queries),
 		VideosHandler:     admin.NewVideosHandler(queries),
+		GalleryHandler:    admin.NewGalleryHandler(queries, uploadDir),
 		MusicHandler:      admin.NewMusicHandler(queries, uploadDir),
 		AboutHandler:      admin.NewAboutHandler(queries),
 		SocialHandler:     admin.NewSocialHandler(queries),
@@ -534,7 +536,7 @@ func TestScriptsFlushedBeforeBodyEnd(t *testing.T) {
 		t.Fatal("expected deferred scripts after the last section")
 	}
 
-	for _, want := range []string{"past-accordion", "klipPlay", "pohConsentAccept", "sectionObserver", "albumScroll"} {
+	for _, want := range []string{"past-accordion", "klipPlay", "pohGalleryOpen", "pohConsentAccept", "sectionObserver", "albumScroll"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected flushed script %q in home page", want)
 		}
@@ -594,7 +596,7 @@ func TestMediaEmbedsGatedBehindConsent(t *testing.T) {
 		}
 	}
 
-	for _, want := range []string{"data-media-embed", "data-media-src=\"https://open.spotify.com/embed", "pohLoadMediaOne", "data-yt-embed", "data-yt-placeholder", "klipEnsurePlayer"} {
+	for _, want := range []string{"data-media-embed", "data-media-src=\"https://open.spotify.com/embed", "pohLoadMediaOne", "data-yt-embed", "data-yt-placeholder", "klipEnsurePlayer", "pohGalleryOpen"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected home to contain %q", want)
 		}
@@ -711,6 +713,395 @@ func TestHomeShowsSeededClips(t *testing.T) {
 			t.Fatalf("expected home to contain %q", want)
 		}
 	}
+}
+
+// TestHomeGalleryFlow covers the mixed gallery end to end:
+// login -> add a photo -> add a YouTube video -> both render in one grid
+// in newest-first order -> delete the photo -> it disappears.
+func TestHomeGalleryFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+
+	jpegSeed, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "files", "poh-promo-2.jpg"))
+	if err != nil {
+		t.Fatalf("read seed photo: %v", err)
+	}
+
+	req := organizersMultipart(t, http.MethodPost, server.URL+"/admin/gallery/photos",
+		map[string]organizerTestFile{"photo": {"gallery-e2e.jpg", jpegSeed}},
+		url.Values{"alt": {"E2E galéria fotka"}}, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post gallery photo: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected photo create 200, got %d", resp.StatusCode)
+	}
+
+	videoForm := url.Values{
+		"youtube_url": {"https://youtu.be/7Msu0l_5Pi0"},
+		"title":       {"E2E galéria video"},
+	}
+	req, err = http.NewRequest(http.MethodPost, server.URL+"/admin/gallery/videos", strings.NewReader(videoForm.Encode()))
+	if err != nil {
+		t.Fatalf("create gallery video request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set(auth.CsrfHeaderName, csrf)
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post gallery video: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected video create 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home: %v", err)
+	}
+
+	body := readBody(t, resp)
+
+	socialIdx := strings.Index(body, `id="social"`)
+	galleryIdx := strings.Index(body, `id="galeria"`)
+	contactIdx := strings.Index(body, `id="kontakt"`)
+	if galleryIdx < 0 || socialIdx < 0 || contactIdx < 0 || !(socialIdx < galleryIdx && galleryIdx < contactIdx) {
+		t.Fatalf("expected gallery section between social and contact (social=%d gallery=%d contact=%d)", socialIdx, galleryIdx, contactIdx)
+	}
+
+	videoIdx := strings.Index(body, "E2E galéria video")
+	photoIdx := strings.Index(body, "E2E galéria fotka")
+	if videoIdx < 0 || photoIdx < 0 {
+		t.Fatalf("expected both gallery items on home (video=%d photo=%d)", videoIdx, photoIdx)
+	}
+
+	// The video was added last, so shared newest-first order puts it first.
+	if videoIdx > photoIdx {
+		t.Fatalf("expected newest video before photo (video=%d photo=%d)", videoIdx, photoIdx)
+	}
+
+	for _, want := range []string{
+		"data-gallery-item",
+		`data-kind="video"`,
+		`data-youtube-id="7Msu0l_5Pi0"`,
+		"https://i.ytimg.com/vi/7Msu0l_5Pi0/hqdefault.jpg",
+		"pohGalleryOpen",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected gallery to contain %q", want)
+		}
+	}
+
+	if strings.Contains(body, ` src="https://www.youtube-nocookie.com/embed`) {
+		t.Fatal("expected gallery video iframe to be consent-gated")
+	}
+
+	// Uploaded photos are post-processed: the lightbox gets a 1600×1200
+	// JPEG and the grid a 640×480 preview, both far below the original.
+	mainURL := scrapeGalleryPhotoAttr(t, body, "data-src=")
+	thumbURL := scrapeGalleryPhotoAttr(t, body, "data-thumb=")
+
+	mainData, mainW, mainH := fetchJPEG(t, client, server.URL+mainURL)
+	if mainW != 1600 || mainH != 1200 {
+		t.Fatalf("expected processed main 1600×1200, got %d×%d", mainW, mainH)
+	}
+
+	if len(mainData) >= len(jpegSeed) {
+		t.Fatalf("expected compressed main (%d) smaller than source (%d)", len(mainData), len(jpegSeed))
+	}
+
+	previewData, previewW, previewH := fetchJPEG(t, client, server.URL+thumbURL)
+	if previewW != 640 || previewH != 480 {
+		t.Fatalf("expected processed preview 640×480, got %d×%d", previewW, previewH)
+	}
+
+	if len(previewData) >= len(mainData) {
+		t.Fatalf("expected preview (%d) smaller than main (%d)", len(previewData), len(mainData))
+	}
+
+	resp, err = client.Get(server.URL + "/admin/gallery")
+	if err != nil {
+		t.Fatalf("get admin gallery: %v", err)
+	}
+
+	id := scrapeGalleryItemID(t, readBody(t, resp), "E2E galéria fotka")
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, server.URL+"/admin/gallery/items/"+id, nil)
+	if err != nil {
+		t.Fatalf("create gallery delete request: %v", err)
+	}
+	deleteReq.Header.Set("HX-Request", "true")
+	deleteReq.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete gallery photo: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected gallery delete 200, got %d", resp.StatusCode)
+	}
+
+	resp, err = client.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("get home after delete: %v", err)
+	}
+
+	body = readBody(t, resp)
+	if strings.Contains(body, "E2E galéria fotka") {
+		t.Fatal("expected deleted gallery photo to disappear from home")
+	}
+
+	if !strings.Contains(body, "E2E galéria video") {
+		t.Fatal("expected remaining gallery video to stay on home")
+	}
+}
+
+// TestAdminGalleryReorderFlow verifies photos and videos share one order:
+// add photo A, video B, photo C -> newest-first C, B, A -> reorder to A, B, C.
+func TestAdminGalleryReorderFlow(t *testing.T) {
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	resp := postLogin(t, client, server.URL, testAdminEmail, testAdminPassword, false)
+	assertRedirect(t, resp, "/admin/dashboard")
+
+	csrf := jarCookie(t, client, server.URL, auth.CsrfCookieName)
+
+	jpegSeed, err := os.ReadFile(filepath.Join("..", "..", "web", "static", "files", "poh-promo-2.jpg"))
+	if err != nil {
+		t.Fatalf("read seed photo: %v", err)
+	}
+
+	addPhoto := func(alt string) {
+		t.Helper()
+
+		req := organizersMultipart(t, http.MethodPost, server.URL+"/admin/gallery/photos",
+			map[string]organizerTestFile{"photo": {alt + ".jpg", jpegSeed}},
+			url.Values{"alt": {alt}}, csrf)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("post gallery photo: %v", err)
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected photo create 200, got %d", resp.StatusCode)
+		}
+	}
+
+	addVideo := func(title string) {
+		t.Helper()
+
+		form := url.Values{"youtube_url": {"7Msu0l_5Pi0"}, "title": {title}}
+		req, err := http.NewRequest(http.MethodPost, server.URL+"/admin/gallery/videos", strings.NewReader(form.Encode()))
+		if err != nil {
+			t.Fatalf("create gallery video request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("HX-Request", "true")
+		req.Header.Set(auth.CsrfHeaderName, csrf)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("post gallery video: %v", err)
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected video create 200, got %d", resp.StatusCode)
+		}
+	}
+
+	addPhoto("E2E reorder A")
+	addVideo("E2E reorder B")
+	addPhoto("E2E reorder C")
+
+	assertHomeOrder := func(want []string) {
+		t.Helper()
+
+		resp, err := client.Get(server.URL + "/")
+		if err != nil {
+			t.Fatalf("get home: %v", err)
+		}
+
+		body := readBody(t, resp)
+		last := -1
+		for _, needle := range want {
+			idx := strings.Index(body, needle)
+			if idx < 0 {
+				t.Fatalf("expected %q on home", needle)
+			}
+			if idx <= last {
+				t.Fatalf("expected %q after previous gallery item", needle)
+			}
+			last = idx
+		}
+	}
+
+	assertHomeOrder([]string{"E2E reorder C", "E2E reorder B", "E2E reorder A"})
+
+	resp, err = client.Get(server.URL + "/admin/gallery")
+	if err != nil {
+		t.Fatalf("get admin gallery: %v", err)
+	}
+
+	ids := scrapeGalleryItemIDs(t, readBody(t, resp))
+	if len(ids) != 3 {
+		t.Fatalf("expected 3 gallery item ids, got %d", len(ids))
+	}
+
+	form := url.Values{}
+	for i := len(ids) - 1; i >= 0; i-- {
+		form.Add("id", ids[i])
+	}
+
+	req, err := http.NewRequest(http.MethodPost, server.URL+"/admin/gallery/reorder", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("create gallery reorder request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set(auth.CsrfHeaderName, jarCookie(t, client, server.URL, auth.CsrfCookieName))
+
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("post gallery reorder: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected reorder 200, got %d", resp.StatusCode)
+	}
+
+	assertHomeOrder([]string{"E2E reorder A", "E2E reorder B", "E2E reorder C"})
+}
+
+// scrapeGalleryPhotoAttr returns the first attribute value of the first
+// photo tile in the public gallery (attributes are rendered in order:
+// data-kind, data-src, data-thumb, ...).
+func scrapeGalleryPhotoAttr(t *testing.T, body, attr string) string {
+	t.Helper()
+
+	idx := strings.Index(body, `data-kind="photo"`)
+	if idx < 0 {
+		t.Fatal("expected a photo item in the public gallery")
+	}
+
+	rest := body[idx:]
+	i := strings.Index(rest, attr)
+	if i < 0 {
+		t.Fatalf("expected photo item to have %q", attr)
+	}
+
+	rest = rest[i+len(attr):]
+	if !strings.HasPrefix(rest, `"`) {
+		t.Fatalf("expected %q to be quoted, got %q", attr, rest)
+	}
+
+	rest = rest[1:]
+	end := strings.IndexByte(rest, '"')
+	if end < 0 {
+		t.Fatalf("expected closing quote after %q", attr)
+	}
+
+	return rest[:end]
+}
+
+// fetchJPEG downloads an uploaded image and returns its bytes and size.
+func fetchJPEG(t *testing.T, client *http.Client, url string) ([]byte, int, int) {
+	t.Helper()
+
+	resp, err := client.Get(url)
+	if err != nil {
+		t.Fatalf("get uploaded image %s: %v", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("get uploaded image %s: status %d", url, resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read uploaded image %s: %v", url, err)
+	}
+
+	cfg, err := jpeg.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("decode uploaded image %s: %v", url, err)
+	}
+
+	return data, cfg.Width, cfg.Height
+}
+
+func scrapeGalleryItemID(t *testing.T, body, anchor string) string {
+	t.Helper()
+
+	idx := strings.Index(body, anchor)
+	if idx < 0 {
+		t.Fatalf("expected gallery item %q in admin list", anchor)
+	}
+
+	return scrapeGalleryIDAfter(t, body[idx:])
+}
+
+func scrapeGalleryItemIDs(t *testing.T, body string) []string {
+	t.Helper()
+
+	var ids []string
+
+	for {
+		idx := strings.Index(body, `hx-delete="/admin/gallery/items/`)
+		if idx < 0 {
+			return ids
+		}
+
+		body = body[idx:]
+		ids = append(ids, scrapeGalleryIDAfter(t, body))
+
+		next := strings.Index(body, `hx-delete="/admin/gallery/items/`)
+		body = body[next+len(`hx-delete="/admin/gallery/items/`):]
+	}
+}
+
+func scrapeGalleryIDAfter(t *testing.T, body string) string {
+	t.Helper()
+
+	const prefix = `hx-delete="/admin/gallery/items/`
+	idx := strings.Index(body, prefix)
+	if idx < 0 {
+		t.Fatalf("expected gallery delete URL in %q", body)
+	}
+
+	rest := body[idx+len(prefix):]
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return r < '0' || r > '9'
+	})
+	if end < 0 {
+		end = len(rest)
+	}
+
+	if end == 0 {
+		t.Fatal("expected numeric gallery item id")
+	}
+
+	return rest[:end]
 }
 
 // TestAdminVideosFlow covers videoclip management end to end:

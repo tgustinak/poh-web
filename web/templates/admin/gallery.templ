@@ -1,0 +1,566 @@
+package templates
+
+import (
+	"strconv"
+
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/gallery"
+	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+)
+
+templ AdminGallery(items []db.GalleryItem, csrf string) {
+	@AdminLayout("Galéria", "gallery", csrf) {
+		@AdminPageHeader("Galéria", "Fotky a YouTube videá v spoločnom poradí")
+		<div class="admin-card">
+			<div class="grid gap-8 lg:grid-cols-2">
+				<form id="gallery-photo-form" method="POST" action="/admin/gallery/photos" hx-post="/admin/gallery/photos" hx-target="#gallery-item-grid" hx-swap="innerHTML" enctype="multipart/form-data" class="grid gap-4">
+					<input type="hidden" name="csrf_token" value={ csrf }/>
+					<div>
+						<h2 class="text-xl font-bold text-white">Fotka</h2>
+						<p class="mt-1 text-sm text-white/50">Vyber fotku (JPG, PNG alebo WebP). Otvorí sa orezanie 4:3 so zoomom; uloží sa JPEG 1600 × 1200 a ľahký náhľad 640 × 480.</p>
+					</div>
+					<div>
+						<label class="admin-label" for="gallery-photo-input">Fotka</label>
+						<input id="gallery-photo-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for="gallery-photo-alt">Popis (alt text)</label>
+						<input id="gallery-photo-alt" name="alt" type="text" maxlength="200" placeholder="napr. Kapela P.O.H na pódiu" autocomplete="off" class="admin-input"/>
+					</div>
+					<div>
+						<button type="submit" class="admin-btn">Pridať fotku</button>
+					</div>
+				</form>
+				<form id="gallery-video-form" method="POST" action="/admin/gallery/videos" hx-post="/admin/gallery/videos" hx-target="#gallery-item-grid" hx-swap="innerHTML" class="grid gap-4">
+					<input type="hidden" name="csrf_token" value={ csrf }/>
+					<div>
+						<h2 class="text-xl font-bold text-white">YouTube video</h2>
+						<p class="mt-1 text-sm text-white/50">Vlož odkaz na YouTube alebo ID videa.</p>
+					</div>
+					<div>
+						<label class="admin-label" for="gallery-video-url">YouTube URL alebo ID</label>
+						<input id="gallery-video-url" name="youtube_url" type="text" required maxlength="200" placeholder="https://www.youtube.com/watch?v=…" class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for="gallery-video-title">Názov</label>
+						<input id="gallery-video-title" name="title" type="text" required maxlength="200" placeholder="Názov videa" class="admin-input"/>
+					</div>
+					<div>
+						<button type="submit" class="admin-btn">Pridať YouTube video</button>
+					</div>
+				</form>
+			</div>
+		</div>
+		<div id="gallery-item-grid" class="mt-6">
+			@AdminGalleryList(items)
+		</div>
+		<div id="gallery-crop-modal" class="hidden fixed inset-0 z-[70] items-center justify-center bg-black/80 p-4">
+			<div class="w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl">
+				<h2 class="text-lg font-bold text-white">Orezať fotku</h2>
+				<p class="mt-1 text-xs text-white/50">Ťahaním fotku posunieš, kolieskom alebo sliderom priblížiš. Uloží sa výrez 4:3 (1600 × 1200).</p>
+				<div class="mt-4 flex flex-col sm:flex-row items-center gap-5">
+					<canvas id="gallery-crop-canvas" width="400" height="300" class="w-full max-w-[400px] aspect-[4/3] rounded-xl bg-black/60 cursor-grab touch-none"></canvas>
+					<div class="flex flex-col items-center gap-2">
+						<canvas id="gallery-crop-preview" width="160" height="120" class="w-32 aspect-[4/3] rounded-lg object-cover ring-2 ring-brand-400/60"></canvas>
+						<span class="text-xs text-white/40">Náhľad</span>
+					</div>
+				</div>
+				<label class="admin-label mt-4" for="gallery-crop-zoom">Priblíženie</label>
+				<input id="gallery-crop-zoom" type="range" min="1" max="4" step="0.01" value="1" class="w-full accent-brand-400"/>
+				<p id="gallery-crop-error" role="alert" class="hidden mt-2 text-sm font-semibold text-red-300"></p>
+				<div class="mt-4 flex justify-end gap-3">
+					<button id="gallery-crop-cancel" type="button" class="admin-nav-item cursor-pointer">Zrušiť</button>
+					<button id="gallery-crop-apply" type="button" class="admin-btn cursor-pointer">Použiť výrez</button>
+				</div>
+			</div>
+		</div>
+		@scripts.Defer("gallery", AdminGalleryScripts())
+		@scripts.Defer("gallery-cropper", GalleryCropperScripts())
+	}
+}
+
+templ AdminGalleryList(items []db.GalleryItem) {
+	<div class="admin-card" data-gallery-list>
+		if len(items) == 0 {
+			<p class="mt-3 text-sm text-white/50">Zatiaľ žiadne položky. Pridaj fotku alebo YouTube video cez formuláre vyššie.</p>
+		} else {
+			<div class="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+				for _, item := range items {
+					@AdminGalleryCard(item, "")
+				}
+			</div>
+		}
+	</div>
+}
+
+templ AdminGalleryCard(item db.GalleryItem, errMsg string) {
+	<div class="group relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]" data-id={ strconv.FormatInt(item.ID, 10) } draggable="true">
+		<div class="relative aspect-[4/3] bg-neutral-900">
+			<img src={ galleryItemThumb(item) } alt={ galleryItemTitle(item) } class="w-full h-full object-cover" loading="lazy"/>
+			<span class="absolute left-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/80">{ galleryItemKindLabel(item) }</span>
+			<span class="absolute right-3 top-3 inline-flex cursor-grab items-center justify-center w-7 h-7 rounded bg-black/60 text-white/50 select-none" title="Potiahni pre zmenu poradia" aria-hidden="true">⋮⋮</span>
+		</div>
+		<div class="px-4 py-3 border-t border-white/10">
+			<p class="text-sm font-semibold text-white truncate">{ galleryItemTitle(item) }</p>
+			<p class="mt-0.5 text-xs text-white/40 break-all">{ galleryItemMeta(item) }</p>
+			if errMsg != "" {
+				<p role="alert" class="mt-1 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			<div class="mt-3 flex justify-end gap-2">
+				<button type="button" class="admin-btn-row cursor-pointer" hx-get={ galleryItemURL(item.ID, "/edit") } hx-target="closest div[data-id]" hx-swap="outerHTML">Upraviť</button>
+				<button type="button" class="admin-btn-row-danger cursor-pointer" hx-delete={ galleryItemURL(item.ID, "") } hx-target="closest div[data-id]" hx-swap="delete" hx-confirm="Naozaj zmazať položku?">Zmazať</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ AdminGalleryEditCard(item db.GalleryItem, errMsg string) {
+	<div class="rounded-xl overflow-hidden border border-brand-400/40 bg-brand-400/[0.04]" data-id={ strconv.FormatInt(item.ID, 10) }>
+		<div class="relative aspect-[4/3] bg-neutral-900">
+			<img src={ galleryItemThumb(item) } alt="" class="w-full h-full object-cover" loading="lazy"/>
+			<span class="absolute left-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/80">{ galleryItemKindLabel(item) }</span>
+		</div>
+		<div class="px-4 py-3">
+			if errMsg != "" {
+				<p role="alert" class="mb-2 text-sm font-semibold text-red-300">{ errMsg }</p>
+			}
+			if item.Kind == gallery.KindVideo {
+				<form hx-put={ galleryItemURL(item.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML" class="grid gap-3">
+					<div>
+						<label class="admin-label" for={ "gallery-edit-url-" + strconv.FormatInt(item.ID, 10) }>YouTube URL alebo ID</label>
+						<input id={ "gallery-edit-url-" + strconv.FormatInt(item.ID, 10) } name="youtube_url" type="text" required maxlength="200" value={ item.YoutubeID } class="admin-input"/>
+					</div>
+					<div>
+						<label class="admin-label" for={ "gallery-edit-title-" + strconv.FormatInt(item.ID, 10) }>Názov</label>
+						<input id={ "gallery-edit-title-" + strconv.FormatInt(item.ID, 10) } name="title" type="text" required maxlength="200" value={ item.Title } class="admin-input"/>
+					</div>
+					<div class="flex gap-2">
+						<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+						<button type="button" class="admin-btn-row cursor-pointer" hx-get={ galleryItemURL(item.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML">Zrušiť</button>
+					</div>
+				</form>
+			} else {
+				<form hx-put={ galleryItemURL(item.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML" class="grid gap-3">
+					<div>
+						<label class="admin-label" for={ "gallery-edit-alt-" + strconv.FormatInt(item.ID, 10) }>Popis (alt text)</label>
+						<input id={ "gallery-edit-alt-" + strconv.FormatInt(item.ID, 10) } name="alt" type="text" maxlength="200" value={ item.Alt } autocomplete="off" class="admin-input"/>
+					</div>
+					<div class="flex gap-2">
+						<button type="submit" class="admin-btn-row cursor-pointer">Uložiť</button>
+						<button type="button" class="admin-btn-row cursor-pointer" hx-get={ galleryItemURL(item.ID, "") } hx-target="closest div[data-id]" hx-swap="outerHTML">Zrušiť</button>
+					</div>
+				</form>
+			}
+		</div>
+	</div>
+}
+
+templ AdminGalleryScripts() {
+	<script>
+		(function galleryReorderInit() {
+			function csrfToken() {
+				const m = document.querySelector('meta[name="csrf-token"]');
+				return m ? m.content : '';
+			}
+			function cardIDs(container) {
+				return Array.from(container.querySelectorAll('[data-id]')).map(el => el.dataset.id);
+			}
+			let saveTimer = null;
+			function saveOrder(container) {
+				if (saveTimer) {
+					clearTimeout(saveTimer);
+				}
+				saveTimer = setTimeout(() => {
+					const params = new URLSearchParams();
+					cardIDs(container).forEach(id => params.append('id', id));
+					fetch('/admin/gallery/reorder', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							'X-CSRF-Token': csrfToken(),
+							'HX-Request': 'true',
+						},
+						body: params.toString(),
+					}).then(async (resp) => {
+						const html = await resp.text();
+						if (resp.ok && html.includes('data-gallery-list')) {
+							container.innerHTML = html;
+							if (window.htmx) {
+								window.htmx.process(container);
+							}
+						}
+						const trigger = resp.headers.get('HX-Trigger');
+						if (trigger) {
+							try {
+								const payload = JSON.parse(trigger);
+								const msg = payload && payload.showToast;
+								if (msg && window.adminToast) {
+									window.adminToast(msg);
+								}
+							} catch (e) {}
+						}
+					}).catch(() => {
+						if (window.adminToast) {
+							window.adminToast('Poradie sa nepodarilo uložiť.');
+						}
+					});
+				}, 400);
+			}
+			let dragCard = null;
+			function onDragStart(e) {
+				const card = e.target.closest('[data-id]');
+				if (!card) {
+					return;
+				}
+				dragCard = card;
+				card.style.opacity = '0.4';
+				e.dataTransfer.effectAllowed = 'move';
+				try {
+					e.dataTransfer.setData('text/plain', card.dataset.id);
+				} catch (err) {}
+			}
+			function onDragOver(e) {
+				if (!dragCard) {
+					return;
+				}
+				e.preventDefault();
+				const over = e.target.closest('[data-id]');
+				if (!over || over === dragCard) {
+					return;
+				}
+				const parent = over.parentNode;
+				const rect = over.getBoundingClientRect();
+				const after = (e.clientY - rect.top) > rect.height / 2 || ((e.clientY - rect.top) >= 0 && (e.clientX - rect.left) > rect.width / 2);
+				if (after) {
+					parent.insertBefore(dragCard, over.nextSibling);
+				} else {
+					parent.insertBefore(dragCard, over);
+				}
+			}
+			function onDrop(e) {
+				if (!dragCard) {
+					return;
+				}
+				e.preventDefault();
+				const container = document.getElementById('gallery-item-grid');
+				dragCard.style.opacity = '';
+				dragCard = null;
+				if (container) {
+					saveOrder(container);
+				}
+			}
+			function onDragEnd() {
+				if (!dragCard) {
+					return;
+				}
+				const container = document.getElementById('gallery-item-grid');
+				dragCard.style.opacity = '';
+				dragCard = null;
+				if (container) {
+					saveOrder(container);
+				}
+			}
+			function bindGalleryReorder() {
+				const container = document.getElementById('gallery-item-grid');
+				if (!container || container.dataset.bound === '1') {
+					return;
+				}
+				container.dataset.bound = '1';
+				container.addEventListener('dragstart', onDragStart);
+				container.addEventListener('dragover', onDragOver);
+				container.addEventListener('drop', onDrop);
+				container.addEventListener('dragend', onDragEnd);
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', bindGalleryReorder);
+			} else {
+				bindGalleryReorder();
+			}
+			document.body.addEventListener('htmx:afterSwap', bindGalleryReorder);
+		})();
+	</script>
+}
+
+templ GalleryCropperScripts() {
+	<script>
+		(function galleryCropperInit() {
+			const form = document.getElementById('gallery-photo-form');
+			const fileInput = document.getElementById('gallery-photo-input');
+			const modal = document.getElementById('gallery-crop-modal');
+			const canvas = document.getElementById('gallery-crop-canvas');
+			const preview = document.getElementById('gallery-crop-preview');
+			const zoom = document.getElementById('gallery-crop-zoom');
+			const applyBtn = document.getElementById('gallery-crop-apply');
+			const cancelBtn = document.getElementById('gallery-crop-cancel');
+			const errorEl = document.getElementById('gallery-crop-error');
+
+			if (!form || !fileInput || !modal || !canvas || !preview || !zoom || !applyBtn || !cancelBtn || !errorEl) {
+				return;
+			}
+
+			const ctx = canvas.getContext('2d');
+			const pctx = preview.getContext('2d');
+			const W = canvas.width;
+			const H = canvas.height;
+			const OUT_W = 1600;
+			const OUT_H = 1200;
+			const MAX_INPUT_BYTES = 40 * 1024 * 1024;
+
+			let img = null;
+			let imgW = 0;
+			let imgH = 0;
+			let scale = 1;
+			let minScale = 1;
+			let offX = 0;
+			let offY = 0;
+			let dragging = false;
+			let lastX = 0;
+			let lastY = 0;
+			let objectUrl = '';
+
+			function showError(msg) {
+				if (!msg) {
+					errorEl.textContent = '';
+					errorEl.classList.add('hidden');
+					return;
+				}
+				errorEl.textContent = msg;
+				errorEl.classList.remove('hidden');
+			}
+
+			function clampOffsets() {
+				const w = imgW * scale;
+				const h = imgH * scale;
+				offX = w <= W ? (W - w) / 2 : Math.min(0, Math.max(W - w, offX));
+				offY = h <= H ? (H - h) / 2 : Math.min(0, Math.max(H - h, offY));
+			}
+
+			function draw() {
+				if (!img) {
+					return;
+				}
+				clampOffsets();
+				ctx.clearRect(0, 0, W, H);
+				ctx.drawImage(img, offX, offY, imgW * scale, imgH * scale);
+
+				// Rule-of-thirds guide inside the fixed 4:3 crop frame.
+				ctx.save();
+				ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				for (let i = 1; i < 3; i++) {
+					ctx.moveTo((W / 3) * i, 0);
+					ctx.lineTo((W / 3) * i, H);
+					ctx.moveTo(0, (H / 3) * i);
+					ctx.lineTo(W, (H / 3) * i);
+				}
+				ctx.stroke();
+				ctx.restore();
+
+				pctx.clearRect(0, 0, preview.width, preview.height);
+				pctx.drawImage(canvas, 0, 0, W, H, 0, 0, preview.width, preview.height);
+			}
+
+			function setScale(next, cx, cy) {
+				const px = cx === undefined ? W / 2 : cx;
+				const py = cy === undefined ? H / 2 : cy;
+				const clamped = Math.min(minScale * 4, Math.max(minScale, next));
+				const k = clamped / scale;
+				offX = px - (px - offX) * k;
+				offY = py - (py - offY) * k;
+				scale = clamped;
+				zoom.value = String(scale / minScale);
+				draw();
+			}
+
+			function openModal() {
+				modal.classList.remove('hidden');
+				modal.classList.add('flex');
+			}
+
+			function closeModal(clearInput) {
+				modal.classList.add('hidden');
+				modal.classList.remove('flex');
+				showError('');
+				applyBtn.disabled = false;
+				if (clearInput) {
+					fileInput.value = '';
+				}
+				if (objectUrl) {
+					URL.revokeObjectURL(objectUrl);
+					objectUrl = '';
+				}
+				img = null;
+				dragging = false;
+				canvas.style.cursor = 'grab';
+			}
+
+			fileInput.addEventListener('change', () => {
+				showError('');
+				const file = fileInput.files && fileInput.files[0];
+				if (!file) {
+					return;
+				}
+				if (!file.type || file.type.indexOf('image/') !== 0) {
+					showError('Vyber obrázok (JPG, PNG alebo WebP).');
+					fileInput.value = '';
+					return;
+				}
+				if (file.size > MAX_INPUT_BYTES) {
+					showError('Fotka je príliš veľká (max 40 MB).');
+					fileInput.value = '';
+					return;
+				}
+				if (objectUrl) {
+					URL.revokeObjectURL(objectUrl);
+				}
+				objectUrl = URL.createObjectURL(file);
+
+				const loaded = new Image();
+				loaded.onload = () => {
+					img = loaded;
+					imgW = loaded.naturalWidth;
+					imgH = loaded.naturalHeight;
+					minScale = Math.max(W / imgW, H / imgH);
+					scale = minScale;
+					offX = (W - imgW * scale) / 2;
+					offY = (H - imgH * scale) / 2;
+					zoom.value = '1';
+					draw();
+					openModal();
+				};
+				loaded.onerror = () => {
+					showError('Obrázok sa nepodarilo načítať.');
+					fileInput.value = '';
+				};
+				loaded.src = objectUrl;
+			});
+
+			canvas.addEventListener('pointerdown', (e) => {
+				if (!img) {
+					return;
+				}
+				dragging = true;
+				lastX = e.clientX;
+				lastY = e.clientY;
+				canvas.setPointerCapture(e.pointerId);
+				canvas.style.cursor = 'grabbing';
+			});
+
+			canvas.addEventListener('pointermove', (e) => {
+				if (!dragging || !img) {
+					return;
+				}
+				const rect = canvas.getBoundingClientRect();
+				const k = W / rect.width;
+				offX += (e.clientX - lastX) * k;
+				offY += (e.clientY - lastY) * k;
+				lastX = e.clientX;
+				lastY = e.clientY;
+				draw();
+			});
+
+			function endDrag() {
+				dragging = false;
+				canvas.style.cursor = 'grab';
+			}
+
+			canvas.addEventListener('pointerup', endDrag);
+			canvas.addEventListener('pointercancel', endDrag);
+
+			canvas.addEventListener('wheel', (e) => {
+				if (!img) {
+					return;
+				}
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const cx = (e.clientX - rect.left) * (W / rect.width);
+				const cy = (e.clientY - rect.top) * (H / rect.height);
+				setScale(scale * (e.deltaY < 0 ? 1.1 : 0.9), cx, cy);
+			}, { passive: false });
+
+			zoom.addEventListener('input', () => {
+				if (!img) {
+					return;
+				}
+				setScale(minScale * parseFloat(zoom.value || '1'));
+			});
+
+			cancelBtn.addEventListener('click', () => closeModal(true));
+			modal.addEventListener('click', (e) => {
+				if (e.target === modal) {
+					closeModal(true);
+				}
+			});
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+					closeModal(true);
+				}
+			});
+
+			applyBtn.addEventListener('click', () => {
+				if (!img) {
+					return;
+				}
+				showError('');
+				applyBtn.disabled = true;
+
+				const out = document.createElement('canvas');
+				out.width = OUT_W;
+				out.height = OUT_H;
+				const octx = out.getContext('2d');
+				octx.fillStyle = '#0a0a0a';
+				octx.fillRect(0, 0, OUT_W, OUT_H);
+				const k = OUT_W / W;
+				octx.drawImage(img, offX * k, offY * k, imgW * scale * k, imgH * scale * k);
+
+				out.toBlob((blob) => {
+					if (!blob) {
+						applyBtn.disabled = false;
+						showError('Výrez sa nepodarilo vytvoriť.');
+						return;
+					}
+					try {
+						const dt = new DataTransfer();
+						dt.items.add(new File([blob], 'galeria-fotka.jpg', { type: 'image/jpeg' }));
+						fileInput.files = dt.files;
+					} catch (err) {
+						applyBtn.disabled = false;
+						showError('Prehliadač nepodporuje orezanie, skús iný prehliadač.');
+						return;
+					}
+					closeModal(false);
+					form.requestSubmit();
+				}, 'image/jpeg', 0.9);
+			});
+		})();
+	</script>
+}
+
+func galleryItemThumb(item db.GalleryItem) string {
+	return gallery.FromDB(item).Thumbnail()
+}
+
+func galleryItemTitle(item db.GalleryItem) string {
+	return gallery.FromDB(item).DisplayTitle()
+}
+
+func galleryItemKindLabel(item db.GalleryItem) string {
+	if item.Kind == gallery.KindVideo {
+		return "Video"
+	}
+
+	return "Fotka"
+}
+
+func galleryItemMeta(item db.GalleryItem) string {
+	if item.Kind == gallery.KindVideo {
+		return item.YoutubeID
+	}
+
+	return gallery.FileName(item.FilePath)
+}
+
+func galleryItemURL(id int64, suffix string) string {
+	return "/admin/gallery/items/" + strconv.FormatInt(id, 10) + suffix
+}

@@ -32,6 +32,7 @@ type Deps struct {
 	LogsHandler       *admin.LogsHandler
 	ConcertsHandler   *admin.ConcertsHandler
 	VideosHandler     *admin.VideosHandler
+	GalleryHandler    *admin.GalleryHandler
 	MusicHandler      *admin.MusicHandler
 	AboutHandler      *admin.AboutHandler
 	SocialHandler     *admin.SocialHandler
@@ -122,6 +123,13 @@ func NewMux(deps Deps) http.Handler {
 			return
 		}
 
+		galleryRows, err := deps.Queries.ListGalleryItemsOrdered(r.Context())
+		if err != nil {
+			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
+
+			return
+		}
+
 		albumRows, err := deps.Queries.ListAlbumsOrdered(r.Context())
 		if err != nil {
 			http.Error(w, "Interná chyba servera", http.StatusInternalServerError)
@@ -159,6 +167,7 @@ func NewMux(deps Deps) http.Handler {
 					Past:     past,
 				}),
 				Videos:  clipRows,
+				Gallery: galleryRows,
 				About:   aboutRow,
 				Social:  socialRows,
 				Albums:  albumRows,
@@ -252,6 +261,20 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /admin/videos/{id}/edit", protected(deps.Auth, deps.VideosHandler.EditForm))
 	mux.HandleFunc("PUT /admin/videos/{id}", protected(deps.Auth, deps.VideosHandler.Update))
 	mux.HandleFunc("DELETE /admin/videos/{id}", protected(deps.Auth, deps.VideosHandler.Delete))
+
+	mux.HandleFunc("GET /admin/gallery", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+
+		deps.GalleryHandler.ListPage(w, r)
+	}))
+
+	mux.HandleFunc("POST /admin/gallery/photos", protected(deps.Auth, deps.GalleryHandler.CreatePhoto))
+	mux.HandleFunc("POST /admin/gallery/videos", protected(deps.Auth, deps.GalleryHandler.CreateVideo))
+	mux.HandleFunc("POST /admin/gallery/reorder", protected(deps.Auth, deps.GalleryHandler.Reorder))
+	mux.HandleFunc("GET /admin/gallery/items/{id}", protected(deps.Auth, deps.GalleryHandler.Row))
+	mux.HandleFunc("GET /admin/gallery/items/{id}/edit", protected(deps.Auth, deps.GalleryHandler.EditForm))
+	mux.HandleFunc("PUT /admin/gallery/items/{id}", protected(deps.Auth, deps.GalleryHandler.Update))
+	mux.HandleFunc("DELETE /admin/gallery/items/{id}", protected(deps.Auth, deps.GalleryHandler.Delete))
 
 	mux.HandleFunc("GET /admin/about", protected(deps.Auth, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

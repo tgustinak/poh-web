@@ -86,6 +86,25 @@ CREATE TABLE organizer_photos (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE gallery_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('photo', 'video')),
+  file_path TEXT NOT NULL DEFAULT '',
+  preview_path TEXT NOT NULL DEFAULT '',
+  youtube_id TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
+  alt TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (
+    (kind = 'photo' AND file_path <> '' AND youtube_id = '')
+    OR
+    (kind = 'video' AND youtube_id <> '' AND file_path = '')
+  )
+);
+
+CREATE INDEX idx_gallery_items_position ON gallery_items(position, id);
+
 CREATE TABLE albums (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
