@@ -2087,3 +2087,19 @@ func scrapeAlbumID(t *testing.T, body, title string) string {
 
 	return rest[:end]
 }
+
+func TestRobotsDisallowsAdmin(t *testing.T) {
+	server, _, _ := testServer(t)
+
+	resp, err := http.Get(server.URL + "/robots.txt")
+	if err != nil {
+		t.Fatalf("get robots: %v", err)
+	}
+
+	body := readBody(t, resp)
+	for _, want := range []string{"Disallow: /admin", "Sitemap: https://www.pohkapela.sk/sitemap.xml"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected robots.txt to contain %q, got %q", want, body)
+		}
+	}
+}
