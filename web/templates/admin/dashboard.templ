@@ -4,7 +4,7 @@ import "fmt"
 
 templ AdminDashboard(csrf string, upcomingConcerts int64) {
 	@AdminLayout("Prehľad", "dashboard", csrf) {
-		@AdminPageHeader("Prehľad", "Správa obsahu webu pohkapela.sk")
+		@AdminPageHeader("Prehľad", "Správa obsahu webu")
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			@AdminDashCard("/admin/music", "Hudba", "2 albumy", "Diskografia v sekcii Hudba")
 			@AdminDashCard("/admin/concerts", "Koncerty", concertCountLabel(upcomingConcerts), "Nadchádzajúce termíny")

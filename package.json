@@ -1,5 +1,5 @@
 {
-  "name": "pohkapela.sk",
+  "name": "poh-web",
   "private": true,
   "scripts": {
     "css:build": "tailwindcss -i ./web/static/css/input.css -o ./web/static/css/output.css --minify",
