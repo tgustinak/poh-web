@@ -16,9 +16,9 @@ import (
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
-	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/gallery"
+	dbmigrations "github.com/tgustinak/poh-web/db/migrations"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/gallery"
 )
 
 func newTestGalleryHandler(t *testing.T) (*GalleryHandler, *db.Queries, string) {

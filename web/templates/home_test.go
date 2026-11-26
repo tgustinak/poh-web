@@ -3,8 +3,8 @@ package templates
 import (
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/contact"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/contact"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 func TestNewConcertsData(t *testing.T) {

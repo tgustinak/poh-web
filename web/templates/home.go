@@ -1,14 +1,14 @@
 package templates
 
 import (
-	"github.com/tgustinak/pohkapela.sk/internal/about"
-	"github.com/tgustinak/pohkapela.sk/internal/concerts"
-	"github.com/tgustinak/pohkapela.sk/internal/contact"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/gallery"
-	"github.com/tgustinak/pohkapela.sk/internal/music"
-	"github.com/tgustinak/pohkapela.sk/internal/social"
-	"github.com/tgustinak/pohkapela.sk/internal/videos"
+	"github.com/tgustinak/poh-web/internal/about"
+	"github.com/tgustinak/poh-web/internal/concerts"
+	"github.com/tgustinak/poh-web/internal/contact"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/gallery"
+	"github.com/tgustinak/poh-web/internal/music"
+	"github.com/tgustinak/poh-web/internal/social"
+	"github.com/tgustinak/poh-web/internal/videos"
 )
 
 // HomeData is the view model for the public home page,

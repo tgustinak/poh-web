@@ -1,4 +1,4 @@
-module github.com/tgustinak/pohkapela.sk
+module github.com/tgustinak/poh-web
 
 go 1.26.7
 

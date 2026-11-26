@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/music"
-	"github.com/tgustinak/pohkapela.sk/internal/scripts"
+	"github.com/tgustinak/poh-web/internal/music"
+	"github.com/tgustinak/poh-web/internal/scripts"
 )
 
 func renderMusic(t *testing.T, count int) string {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
+	"github.com/tgustinak/poh-web/internal/auth"
 )
 
 func TestLoginPageRendersForm(t *testing.T) {

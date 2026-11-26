@@ -11,16 +11,16 @@ import (
 	"runtime"
 
 	"github.com/a-h/templ"
-	"github.com/tgustinak/pohkapela.sk/internal/admin"
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/concerts"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/organizers"
-	"github.com/tgustinak/pohkapela.sk/internal/scripts"
-	"github.com/tgustinak/pohkapela.sk/internal/server"
-	"github.com/tgustinak/pohkapela.sk/internal/uploads"
-	"github.com/tgustinak/pohkapela.sk/web/templates"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/concerts"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/organizers"
+	"github.com/tgustinak/poh-web/internal/scripts"
+	"github.com/tgustinak/poh-web/internal/server"
+	"github.com/tgustinak/poh-web/internal/uploads"
+	"github.com/tgustinak/poh-web/web/templates"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // Deps are the dependencies needed to build the application handler.

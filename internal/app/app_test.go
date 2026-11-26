@@ -22,12 +22,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/tgustinak/pohkapela.sk/internal/admin"
-	"github.com/tgustinak/pohkapela.sk/internal/app"
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/database"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
+	"github.com/tgustinak/poh-web/internal/admin"
+	"github.com/tgustinak/poh-web/internal/app"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/database"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/logbuffer"
 )
 
 const (

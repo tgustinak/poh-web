@@ -7,9 +7,9 @@ package gallery
 import (
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/uploads"
-	"github.com/tgustinak/pohkapela.sk/internal/videos"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/uploads"
+	"github.com/tgustinak/poh-web/internal/videos"
 )
 
 // Item kinds stored in gallery_items.kind.

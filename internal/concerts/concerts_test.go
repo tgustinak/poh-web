@@ -3,7 +3,7 @@ package concerts
 import (
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 func dbConcert(date string) db.Concert {

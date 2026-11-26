@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/logbuffer"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // LogsHandler serves the admin log viewer.

@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/about"
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/about"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/htmx"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // AboutHandler serves admin editing of the "O nás" section (singleton row).

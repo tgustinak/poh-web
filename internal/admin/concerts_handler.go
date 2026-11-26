@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/concerts"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/concerts"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/htmx"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // ConcertsHandler serves admin concert management (CRUD).

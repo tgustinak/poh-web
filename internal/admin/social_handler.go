@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	"github.com/tgustinak/pohkapela.sk/internal/social"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/htmx"
+	"github.com/tgustinak/poh-web/internal/social"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // SocialHandler serves admin editing of the "Social" section.

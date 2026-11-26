@@ -11,10 +11,10 @@ import (
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
-	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
+	dbmigrations "github.com/tgustinak/poh-web/db/migrations"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/logbuffer"
 )
 
 func newTestHandlers(t *testing.T) (*AuthHandler, *LogsHandler, *auth.Service) {
