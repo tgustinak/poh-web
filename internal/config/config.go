@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/tgustinak/poh-web/internal/site"
 )
 
 // Config holds runtime configuration loaded from the environment.
@@ -28,7 +27,7 @@ type Config struct {
 	// Secure cookies and logging.
 	BehindProxy bool
 	// SiteURL is the public base URL (scheme + host, no path) used for
-	// canonical links, Open Graph tags and the sitemap.
+	// canonical links, Open Graph tags and the sitemap. Required.
 	SiteURL string
 	// CookieSecure forces Secure on session/CSRF cookies. Use "always"
 	// in production behind HTTPS, "auto" (default) follows the request.
@@ -49,7 +48,7 @@ func Load() Config {
 		ForceShutdownAfterInSeconds: getenv("FORCE_SHUTDOWN_AFTER_IN_SECONDS", "10"),
 		BehindProxy:                 getenv("BEHIND_PROXY", "false") == "true",
 		CookieSecure:                getenv("COOKIE_SECURE", "auto"),
-		SiteURL:                     getenv("SITE_URL", site.DefaultBaseURL),
+		SiteURL:                     os.Getenv("SITE_URL"),
 	}
 }
 
@@ -90,7 +89,7 @@ func (c Config) Validate() error {
 	}
 
 	if u, err := url.Parse(c.SiteURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
-		return fmt.Errorf("invalid SITE_URL %q: expected like https://www.example.com", c.SiteURL)
+		return fmt.Errorf("invalid or missing SITE_URL %q: expected like https://www.example.com", c.SiteURL)
 	}
 
 	return nil

@@ -2090,6 +2090,9 @@ func scrapeAlbumID(t *testing.T, body, title string) string {
 }
 
 func TestRobotsDisallowsAdmin(t *testing.T) {
+	site.SetBaseURL("https://www.pohkapela.sk")
+	t.Cleanup(func() { site.SetBaseURL("") })
+
 	server, _, _ := testServer(t)
 
 	resp, err := http.Get(server.URL + "/robots.txt")
@@ -2107,7 +2110,7 @@ func TestRobotsDisallowsAdmin(t *testing.T) {
 
 func TestSiteURLInMetadata(t *testing.T) {
 	site.SetBaseURL("https://staging.example.com/")
-	t.Cleanup(func() { site.SetBaseURL(site.DefaultBaseURL) })
+	t.Cleanup(func() { site.SetBaseURL("") })
 
 	server, _, _ := testServer(t)
 

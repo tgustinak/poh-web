@@ -43,6 +43,7 @@ Deployment is done with `make deploy`, which runs `scripts/deploy.sh`. The
 target host and paths are read from a local, git-ignored `.deploy.env` file
 (see the variables listed at the top of the script). Production configuration
 is supplied through environment variables (see `.env.example`).
+`SITE_URL` is required; the app refuses to start without it.
 
 The remote side runs `/usr/local/bin/pohkapela-deploy`; install or update it
 from `scripts/remote-deploy.sh` (the header of that file shows the exact
