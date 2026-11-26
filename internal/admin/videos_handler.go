@@ -3,15 +3,15 @@ package admin
 import (
 	"database/sql"
 	"errors"
-	"net/http"
-	"strconv"
-	"strings"
-
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/htmx"
+	"github.com/tgustinak/pohkapela.sk/internal/ordering"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
 // VideosHandler serves admin videoclip management (CRUD + reorder).
@@ -55,19 +55,17 @@ func (h *VideosHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// New clips go first in the playlist: shift existing clips down
-	// and insert the new one at position 1.
-	if err := h.queries.ShiftVideoPositions(r.Context()); err != nil {
-		h.createFailed(w, r, "Klip sa nepodarilo uložiť, skús to znova.")
+	// and insert the new one at position 1, all or nothing.
+	err := ordering.InsertFirst(r.Context(), h.queries, ordering.Videos, func(q *db.Queries) error {
+		_, err := q.CreateVideo(r.Context(), db.CreateVideoParams{
+			YoutubeID:     params.YoutubeID,
+			Title:         params.Title,
+			PublishedDate: params.PublishedDate,
+			Duration:      params.Duration,
+			Position:      1,
+		})
 
-		return
-	}
-
-	created, err := h.queries.CreateVideo(r.Context(), db.CreateVideoParams{
-		YoutubeID:     params.YoutubeID,
-		Title:         params.Title,
-		PublishedDate: params.PublishedDate,
-		Duration:      params.Duration,
-		Position:      1,
+		return err
 	})
 	if err != nil {
 		if isDuplicateVideo(err) {
@@ -80,7 +78,6 @@ func (h *VideosHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	_ = created
 
 	if !htmx.IsHtmxRequest(r) {
 		htmx.Redirect(w, r, "/admin/videos")
@@ -211,69 +208,17 @@ func (h *VideosHandler) Reorder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDs := r.Form["id"]
-	if len(rawIDs) == 0 {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	ids := make([]int64, 0, len(rawIDs))
-	seen := make(map[int64]struct{}, len(rawIDs))
-
-	for _, raw := range rawIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		if _, dup := seen[id]; dup {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		seen[id] = struct{}{}
-		ids = append(ids, id)
-	}
-
-	rows, err := h.queries.ListVideosOrdered(r.Context())
-	if err != nil {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	if len(rows) != len(ids) {
+	err := ordering.Reorder(r.Context(), h.queries, ordering.Videos, r.Form["id"])
+	if errors.Is(err, ordering.ErrStale) {
 		h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
 
 		return
 	}
 
-	known := make(map[int64]struct{}, len(rows))
-	for _, v := range rows {
-		known[v.ID] = struct{}{}
-	}
+	if err != nil {
+		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
 
-	for _, id := range ids {
-		if _, ok := known[id]; !ok {
-			h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
-
-			return
-		}
-	}
-
-	for i, id := range ids {
-		if err := h.queries.UpdateVideoPosition(r.Context(), db.UpdateVideoPositionParams{
-			Position: int64(i + 1),
-			ID:       id,
-		}); err != nil {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
+		return
 	}
 
 	if !htmx.IsHtmxRequest(r) {

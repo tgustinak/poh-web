@@ -5,6 +5,12 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"github.com/tgustinak/pohkapela.sk/internal/auth"
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/htmx"
+	"github.com/tgustinak/pohkapela.sk/internal/music"
+	"github.com/tgustinak/pohkapela.sk/internal/ordering"
+	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 	"io"
 	"net/http"
 	"os"
@@ -12,12 +18,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	"github.com/tgustinak/pohkapela.sk/internal/music"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
 // musicUploadPrefix is the public path prefix for album covers,
@@ -100,26 +100,23 @@ func (h *MusicHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.queries.ShiftAlbumPositions(r.Context()); err != nil {
-		h.createFailed(w, r, "Album sa nepodarilo uložiť, skús to znova.")
+	err = ordering.InsertFirst(r.Context(), h.queries, ordering.Albums, func(q *db.Queries) error {
+		_, err := q.CreateAlbum(r.Context(), db.CreateAlbumParams{
+			Title:     params.Title,
+			Year:      params.Year,
+			Badge:     params.Badge,
+			CoverPath: musicUploadPrefix + name,
+			IsNew:     boolToInt(params.IsNew),
+			Position:  1,
+		})
 
-		return
-	}
-
-	created, err := h.queries.CreateAlbum(r.Context(), db.CreateAlbumParams{
-		Title:     params.Title,
-		Year:      params.Year,
-		Badge:     params.Badge,
-		CoverPath: musicUploadPrefix + name,
-		IsNew:     boolToInt(params.IsNew),
-		Position:  1,
+		return err
 	})
 	if err != nil {
 		h.createFailed(w, r, "Album sa nepodarilo uložiť, skús to znova.")
 
 		return
 	}
-	_ = created
 
 	if !htmx.IsHtmxRequest(r) {
 		htmx.Redirect(w, r, "/admin/music")
@@ -280,69 +277,17 @@ func (h *MusicHandler) Reorder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDs := r.Form["id"]
-	if len(rawIDs) == 0 {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	ids := make([]int64, 0, len(rawIDs))
-	seen := make(map[int64]struct{}, len(rawIDs))
-
-	for _, raw := range rawIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		if _, dup := seen[id]; dup {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		seen[id] = struct{}{}
-		ids = append(ids, id)
-	}
-
-	rows, err := h.queries.ListAlbumsOrdered(r.Context())
-	if err != nil {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	if len(rows) != len(ids) {
+	err := ordering.Reorder(r.Context(), h.queries, ordering.Albums, r.Form["id"])
+	if errors.Is(err, ordering.ErrStale) {
 		h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
 
 		return
 	}
 
-	known := make(map[int64]struct{}, len(rows))
-	for _, a := range rows {
-		known[a.ID] = struct{}{}
-	}
+	if err != nil {
+		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
 
-	for _, id := range ids {
-		if _, ok := known[id]; !ok {
-			h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
-
-			return
-		}
-	}
-
-	for i, id := range ids {
-		if err := h.queries.UpdateAlbumPosition(r.Context(), db.UpdateAlbumPositionParams{
-			Position: int64(i + 1),
-			ID:       id,
-		}); err != nil {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
+		return
 	}
 
 	if !htmx.IsHtmxRequest(r) {
