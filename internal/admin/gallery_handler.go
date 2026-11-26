@@ -5,18 +5,18 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/tgustinak/pohkapela.sk/internal/auth"
+	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/gallery"
+	"github.com/tgustinak/pohkapela.sk/internal/htmx"
+	"github.com/tgustinak/pohkapela.sk/internal/ordering"
+	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/gallery"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
 // galleryUploadPrefix is the public path prefix for gallery photos,
@@ -116,18 +116,16 @@ func (h *GalleryHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.queries.ShiftGalleryItemPositions(r.Context()); err != nil {
-		h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
+	if err := ordering.InsertFirst(r.Context(), h.queries, ordering.GalleryItems, func(q *db.Queries) error {
+		_, err := q.CreateGalleryItem(r.Context(), db.CreateGalleryItemParams{
+			Kind:        gallery.KindPhoto,
+			FilePath:    galleryUploadPrefix + fileName,
+			PreviewPath: galleryUploadPrefix + previewName,
+			Alt:         alt,
+			Position:    1,
+		})
 
-		return
-	}
-
-	if _, err := h.queries.CreateGalleryItem(r.Context(), db.CreateGalleryItemParams{
-		Kind:        gallery.KindPhoto,
-		FilePath:    galleryUploadPrefix + fileName,
-		PreviewPath: galleryUploadPrefix + previewName,
-		Alt:         alt,
-		Position:    1,
+		return err
 	}); err != nil {
 		h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
@@ -190,17 +188,15 @@ func (h *GalleryHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.queries.ShiftGalleryItemPositions(r.Context()); err != nil {
-		h.createVideoFailed(w, r, "Video sa nepodarilo uložiť, skús to znova.")
+	if err := ordering.InsertFirst(r.Context(), h.queries, ordering.GalleryItems, func(q *db.Queries) error {
+		_, err := q.CreateGalleryItem(r.Context(), db.CreateGalleryItemParams{
+			Kind:      gallery.KindVideo,
+			YoutubeID: youtubeID,
+			Title:     title,
+			Position:  1,
+		})
 
-		return
-	}
-
-	if _, err := h.queries.CreateGalleryItem(r.Context(), db.CreateGalleryItemParams{
-		Kind:      gallery.KindVideo,
-		YoutubeID: youtubeID,
-		Title:     title,
-		Position:  1,
+		return err
 	}); err != nil {
 		h.createVideoFailed(w, r, "Video sa nepodarilo uložiť, skús to znova.")
 
@@ -414,69 +410,17 @@ func (h *GalleryHandler) Reorder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDs := r.Form["id"]
-	if len(rawIDs) == 0 {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	ids := make([]int64, 0, len(rawIDs))
-	seen := make(map[int64]struct{}, len(rawIDs))
-
-	for _, raw := range rawIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		if _, dup := seen[id]; dup {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
-
-		seen[id] = struct{}{}
-		ids = append(ids, id)
-	}
-
-	rows, err := h.queries.ListGalleryItemsOrdered(r.Context())
-	if err != nil {
-		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-		return
-	}
-
-	if len(rows) != len(ids) {
+	err := ordering.Reorder(r.Context(), h.queries, ordering.GalleryItems, r.Form["id"])
+	if errors.Is(err, ordering.ErrStale) {
 		h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
 
 		return
 	}
 
-	known := make(map[int64]struct{}, len(rows))
-	for _, item := range rows {
-		known[item.ID] = struct{}{}
-	}
+	if err != nil {
+		h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
 
-	for _, id := range ids {
-		if _, ok := known[id]; !ok {
-			h.reorderFailed(w, r, "Zoznam sa medzitým zmenil, obnov stránku a skús znova.")
-
-			return
-		}
-	}
-
-	for i, id := range ids {
-		if err := h.queries.UpdateGalleryItemPosition(r.Context(), db.UpdateGalleryItemPositionParams{
-			Position: int64(i + 1),
-			ID:       id,
-		}); err != nil {
-			h.reorderFailed(w, r, "Poradie sa nepodarilo uložiť, skús to znova.")
-
-			return
-		}
+		return
 	}
 
 	if !htmx.IsHtmxRequest(r) {
