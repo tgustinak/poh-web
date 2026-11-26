@@ -15,7 +15,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()")
 		// Only sent over HTTPS by browsers; harmless on plain HTTP.
-		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; "+
 			"script-src 'self' 'unsafe-inline'; "+
 			"style-src 'self' 'unsafe-inline'; "+
