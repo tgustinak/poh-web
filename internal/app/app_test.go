@@ -28,6 +28,7 @@ import (
 	"github.com/tgustinak/poh-web/internal/database"
 	"github.com/tgustinak/poh-web/internal/db"
 	"github.com/tgustinak/poh-web/internal/logbuffer"
+	"github.com/tgustinak/poh-web/internal/site"
 )
 
 const (
@@ -2100,6 +2101,35 @@ func TestRobotsDisallowsAdmin(t *testing.T) {
 	for _, want := range []string{"Disallow: /admin", "Sitemap: https://www.pohkapela.sk/sitemap.xml"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected robots.txt to contain %q, got %q", want, body)
+		}
+	}
+}
+
+func TestSiteURLInMetadata(t *testing.T) {
+	site.SetBaseURL("https://staging.example.com/")
+	t.Cleanup(func() { site.SetBaseURL(site.DefaultBaseURL) })
+
+	server, _, _ := testServer(t)
+
+	for path, wants := range map[string][]string{
+		"/": {
+			`<link rel="canonical" href="https://staging.example.com/"`,
+			`content="https://staging.example.com/static/images/hero-1280.jpg"`,
+			`"url":"https://staging.example.com/"`,
+		},
+		"/sitemap.xml": {"<loc>https://staging.example.com/pre-organizatorov</loc>"},
+		"/robots.txt":  {"Sitemap: https://staging.example.com/sitemap.xml"},
+	} {
+		resp, err := http.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("get %s: %v", path, err)
+		}
+
+		body := readBody(t, resp)
+		for _, want := range wants {
+			if !strings.Contains(body, want) {
+				t.Fatalf("%s: expected %q in body", path, want)
+			}
 		}
 	}
 }

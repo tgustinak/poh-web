@@ -18,6 +18,7 @@ import (
 	"github.com/tgustinak/poh-web/internal/organizers"
 	"github.com/tgustinak/poh-web/internal/scripts"
 	"github.com/tgustinak/poh-web/internal/server"
+	"github.com/tgustinak/poh-web/internal/site"
 	"github.com/tgustinak/poh-web/internal/uploads"
 	"github.com/tgustinak/poh-web/web/templates"
 	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
@@ -63,7 +64,7 @@ func NewMux(deps Deps) http.Handler {
 	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		_, _ = w.Write([]byte("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: https://www.pohkapela.sk/sitemap.xml\n"))
+		_, _ = w.Write([]byte("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: " + site.URL("/sitemap.xml") + "\n"))
 	})
 
 	mux.HandleFunc("GET /sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
@@ -71,8 +72,8 @@ func NewMux(deps Deps) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>` +
 			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
-			`<url><loc>https://www.pohkapela.sk/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>` +
-			`<url><loc>https://www.pohkapela.sk/pre-organizatorov</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>` +
+			`<url><loc>` + site.URL("/") + `</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>` +
+			`<url><loc>` + site.URL("/pre-organizatorov") + `</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>` +
 			`</urlset>`))
 	})
 

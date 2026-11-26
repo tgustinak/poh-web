@@ -16,6 +16,7 @@ import (
 	"github.com/tgustinak/poh-web/internal/db"
 	"github.com/tgustinak/poh-web/internal/logbuffer"
 	"github.com/tgustinak/poh-web/internal/server"
+	"github.com/tgustinak/poh-web/internal/site"
 )
 
 func main() {
@@ -52,6 +53,7 @@ func main() {
 	seedAdmin(ctx, authSvc, cfg)
 
 	auth.ConfigureCookies(cfg.BehindProxy, cfg.CookieSecure)
+	site.SetBaseURL(cfg.SiteURL)
 
 	shutdownTimeout, err := strconv.Atoi(cfg.ForceShutdownAfterInSeconds)
 	if err != nil || shutdownTimeout <= 0 {
