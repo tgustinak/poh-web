@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/uploads"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/uploads"
 )
 
 // Document slots in display order (matches the position column seed).

@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 // Platforms in display order (matches the position column seed).

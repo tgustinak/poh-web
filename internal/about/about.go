@@ -5,7 +5,7 @@ package about
 import (
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 // Max lengths for the editable fields (in runes, after trim).

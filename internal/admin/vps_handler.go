@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // VPSHandler serves the VPS monitoring page.

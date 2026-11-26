@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	"github.com/tgustinak/pohkapela.sk/internal/organizers"
-	"github.com/tgustinak/pohkapela.sk/internal/uploads"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/htmx"
+	"github.com/tgustinak/poh-web/internal/organizers"
+	"github.com/tgustinak/poh-web/internal/uploads"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // OrganizersHandler serves admin management of the "Pre organizátorov"

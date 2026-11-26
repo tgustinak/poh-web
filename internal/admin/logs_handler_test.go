@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
+	"github.com/tgustinak/poh-web/internal/logbuffer"
 )
 
 func TestLogsPageRendersEntries(t *testing.T) {

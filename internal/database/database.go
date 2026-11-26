@@ -11,8 +11,8 @@ import (
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
-	dbmigrations "github.com/tgustinak/pohkapela.sk/db/migrations"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	dbmigrations "github.com/tgustinak/poh-web/db/migrations"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 // Open connects to the SQLite database at path, creates the parent

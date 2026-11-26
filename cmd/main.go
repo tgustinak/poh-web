@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tgustinak/pohkapela.sk/internal/admin"
-	"github.com/tgustinak/pohkapela.sk/internal/app"
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/config"
-	"github.com/tgustinak/pohkapela.sk/internal/database"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/logbuffer"
-	"github.com/tgustinak/pohkapela.sk/internal/server"
+	"github.com/tgustinak/poh-web/internal/admin"
+	"github.com/tgustinak/poh-web/internal/app"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/config"
+	"github.com/tgustinak/poh-web/internal/database"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/logbuffer"
+	"github.com/tgustinak/poh-web/internal/server"
 )
 
 func main() {

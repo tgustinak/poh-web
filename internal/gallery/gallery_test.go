@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 func TestIsKind(t *testing.T) {

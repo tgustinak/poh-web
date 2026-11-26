@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/tgustinak/pohkapela.sk/internal/auth"
-	"github.com/tgustinak/pohkapela.sk/internal/htmx"
-	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
+	"github.com/tgustinak/poh-web/internal/auth"
+	"github.com/tgustinak/poh-web/internal/htmx"
+	admintemplates "github.com/tgustinak/poh-web/web/templates/admin"
 )
 
 // AuthHandler serves admin login, logout and session-aware redirects.

@@ -3,7 +3,7 @@ package concerts
 import (
 	"time"
 
-	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/poh-web/internal/db"
 )
 
 type Concert struct {

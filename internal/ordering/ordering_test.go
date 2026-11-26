@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/tgustinak/pohkapela.sk/internal/database"
-	"github.com/tgustinak/pohkapela.sk/internal/db"
-	"github.com/tgustinak/pohkapela.sk/internal/ordering"
+	"github.com/tgustinak/poh-web/internal/database"
+	"github.com/tgustinak/poh-web/internal/db"
+	"github.com/tgustinak/poh-web/internal/ordering"
 )
 
 // seedVideos creates n videos at positions 1..n and returns their ids in order.
