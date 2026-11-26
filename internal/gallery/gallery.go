@@ -5,10 +5,10 @@
 package gallery
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
 )
 
@@ -54,20 +54,7 @@ func ValidateTitle(s string) (string, bool) {
 // DetectPhoto checks uploaded bytes are a supported image.
 // It returns the file extension for storage.
 func DetectPhoto(data []byte) (string, bool) {
-	if len(data) == 0 || len(data) > MaxPhotoBytes {
-		return "", false
-	}
-
-	switch http.DetectContentType(data) {
-	case "image/jpeg":
-		return ".jpg", true
-	case "image/png":
-		return ".png", true
-	case "image/webp":
-		return ".webp", true
-	default:
-		return "", false
-	}
+	return uploads.DetectImage(data, MaxPhotoBytes)
 }
 
 // YouTubeID extracts the 11-character video ID from a YouTube URL or

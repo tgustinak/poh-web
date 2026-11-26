@@ -2,20 +2,16 @@ package admin
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/contact"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/htmx"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
 
@@ -23,29 +19,18 @@ import (
 // The browser canvas exports ~800x800 webp, typically well below 1 MB.
 const maxContactPhotoBytes = 8 << 20
 
-// managerPhotoName matches the server-generated contact photo file names
-// (manager-<sha256 prefix>.<ext>). Only matching files are ever deleted
-// by the handler.
-var managerPhotoName = regexp.MustCompile(`^manager-[0-9a-f]{16}\.(webp|jpg|jpeg|png)$`)
-
-// uploadURLPrefix is the public path prefix for uploaded contact photos,
-// served by the /uploads/ route with immutable caching (file names carry
-// a content hash, so every new photo is a fresh URL).
-const uploadURLPrefix = "/uploads/"
-
 // ContactHandler serves admin editing of the "Kontakt" section
 // (singleton row plus manager photo).
 type ContactHandler struct {
 	queries *db.Queries
-	// photoDir is the directory holding uploaded manager photo files
-	// (data/uploads by default). Tests override it so they never
-	// touch real assets.
-	photoDir string
+	// uploads stores the uploaded manager photo (data/uploads by default).
+	// Tests point it at a temp dir so they never touch real assets.
+	uploads *uploads.Store
 }
 
 // NewContactHandler creates an admin contact handler.
 func NewContactHandler(queries *db.Queries, uploadDir string) *ContactHandler {
-	return &ContactHandler{queries: queries, photoDir: uploadDir}
+	return &ContactHandler{queries: queries, uploads: uploads.NewStore(uploadDir)}
 }
 
 // GetContact loads the contact row for display. A photo path whose file
@@ -58,7 +43,7 @@ func (h *ContactHandler) GetContact(ctx context.Context) (contact.Contact, error
 	}
 
 	c := contact.FromDB(row)
-	if c.PhotoPath != "" && !h.photoExists(c.PhotoPath) {
+	if c.PhotoPath != "" && !h.uploads.Exists(c.PhotoPath) {
 		c.PhotoPath = ""
 	}
 
@@ -154,26 +139,15 @@ func (h *ContactHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctype := http.DetectContentType(data)
-
-	ext, ok := photoExtension(ctype)
+	ext, ok := uploads.DetectImage(data, maxContactPhotoBytes)
 	if !ok {
 		h.photoFailed(w, r, "Podporované sú len JPG, PNG a WebP.")
 
 		return
 	}
 
-	sum := sha256.Sum256(data)
-	name := "manager-" + hex.EncodeToString(sum[:])[:16] + ext
-	urlPath := uploadURLPrefix + name
-
-	if err := os.MkdirAll(h.photoDir, 0o755); err != nil {
-		h.photoFailed(w, r, "Fotku sa nepodarilo uložiť.")
-
-		return
-	}
-
-	if err := os.WriteFile(filepath.Join(h.photoDir, name), data, 0o644); err != nil {
+	urlPath, err := h.uploads.Save("manager", data, ext)
+	if err != nil {
 		h.photoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
 		return
@@ -194,7 +168,7 @@ func (h *ContactHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 
 	// Best effort: drop the previous file so uploads do not accumulate.
 	// A re-upload of identical bytes maps to the same name and is kept.
-	h.removePhotoFile(old.PhotoPath, urlPath)
+	h.uploads.Remove(old.PhotoPath, urlPath)
 
 	if !htmx.IsHtmxRequest(r) && r.Header.Get("Accept") != "application/json" && r.URL.Query().Get("format") == "" {
 		// Plain no-JS form fallback.
@@ -228,54 +202,10 @@ func (h *ContactHandler) DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Best effort: the file is just a cache of the DB state.
-	h.removePhotoFile(old.PhotoPath, "")
+	h.uploads.Remove(old.PhotoPath, "")
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Fotka zmazaná."})
-}
-
-// photoExtension maps a detected image content type to a file extension.
-// The second return value is false for unsupported types.
-func photoExtension(ctype string) (string, bool) {
-	switch ctype {
-	case "image/jpeg":
-		return ".jpg", true
-	case "image/png":
-		return ".png", true
-	case "image/webp":
-		return ".webp", true
-	default:
-		return "", false
-	}
-}
-
-// removePhotoFile deletes a previous contact photo file, keeping the one
-// at keepPath. Unknown paths are never touched: only file names generated
-// by this handler (manager-<hash>.<ext>) inside the uploads directory qualify.
-func (h *ContactHandler) removePhotoFile(urlPath, keepPath string) {
-	if urlPath == "" || urlPath == keepPath {
-		return
-	}
-
-	name := strings.TrimPrefix(urlPath, uploadURLPrefix)
-	if name == urlPath || strings.Contains(name, "/") || !managerPhotoName.MatchString(name) {
-		return
-	}
-
-	_ = os.Remove(filepath.Join(h.photoDir, name))
-}
-
-// photoExists reports whether the file behind a contact photo URL exists
-// in the uploads directory.
-func (h *ContactHandler) photoExists(urlPath string) bool {
-	name := strings.TrimPrefix(urlPath, uploadURLPrefix)
-	if name == urlPath || strings.Contains(name, "/") || !managerPhotoName.MatchString(name) {
-		return false
-	}
-
-	info, err := os.Stat(filepath.Join(h.photoDir, name))
-
-	return err == nil && !info.IsDir()
 }
 
 // updateFailed answers a failed update: the form with an inline error
