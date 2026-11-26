@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/tgustinak/pohkapela.sk/internal/admin"
@@ -19,6 +18,7 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/organizers"
 	"github.com/tgustinak/pohkapela.sk/internal/scripts"
 	"github.com/tgustinak/pohkapela.sk/internal/server"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 	"github.com/tgustinak/pohkapela.sk/web/templates"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
@@ -87,8 +87,8 @@ func NewMux(deps Deps) http.Handler {
 	// Uploaded files (contact photo, ...) carry a content hash in their
 	// file names, so every new upload is a fresh immutable URL.
 	mux.Handle(
-		"/uploads/",
-		http.StripPrefix("/uploads/", immutableFileServer(deps.UploadDir)),
+		uploads.URLPrefix,
+		http.StripPrefix(uploads.URLPrefix, uploads.NewStore(deps.UploadDir).Handler()),
 	)
 
 	// Browsers request /favicon.ico by default even when the page
@@ -372,24 +372,6 @@ func staticDir() string {
 
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..", "web", "static")
-}
-
-// immutableFileServer serves uploaded files with a long immutable cache
-// lifetime. Upload file names embed a content hash, so a changed file is
-// always a new URL and browsers never need to revalidate.
-func immutableFileServer(dir string) http.Handler {
-	fs := http.FileServer(http.Dir(dir))
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		// PDFs are served as downloads to avoid inline polyglot XSS.
-		if strings.HasSuffix(strings.ToLower(r.URL.Path), ".pdf") {
-			w.Header().Set("Content-Disposition", "attachment")
-			w.Header().Set("X-Download-Options", "noopen")
-		}
-		fs.ServeHTTP(w, r)
-	})
 }
 
 // cacheControlFileServer serves static assets with explicit caching.

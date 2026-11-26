@@ -3,15 +3,16 @@ package admin
 import (
 	"database/sql"
 	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/htmx"
 	"github.com/tgustinak/pohkapela.sk/internal/ordering"
 	"github.com/tgustinak/pohkapela.sk/internal/videos"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
-	"net/http"
-	"strconv"
-	"strings"
 )
 
 // VideosHandler serves admin videoclip management (CRUD + reorder).

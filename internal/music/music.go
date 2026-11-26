@@ -5,12 +5,12 @@
 package music
 
 import (
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/tgustinak/pohkapela.sk/internal/db"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 )
 
 // Year bounds for album validation.
@@ -97,20 +97,7 @@ func ValidateBadge(s string) (string, bool) {
 // DetectCover checks uploaded bytes are a supported cover image.
 // It returns the file extension for storage.
 func DetectCover(data []byte) (string, bool) {
-	if len(data) == 0 || len(data) > MaxCoverBytes {
-		return "", false
-	}
-
-	switch http.DetectContentType(data) {
-	case "image/jpeg":
-		return ".jpg", true
-	case "image/png":
-		return ".png", true
-	case "image/webp":
-		return ".webp", true
-	default:
-		return "", false
-	}
+	return uploads.DetectImage(data, MaxCoverBytes)
 }
 
 // ParseSpotifyArtistURL extracts the normalized artist URL from a Spotify

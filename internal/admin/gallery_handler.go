@@ -5,44 +5,31 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/tgustinak/pohkapela.sk/internal/auth"
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/gallery"
 	"github.com/tgustinak/pohkapela.sk/internal/htmx"
 	"github.com/tgustinak/pohkapela.sk/internal/ordering"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
-	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 )
-
-// galleryUploadPrefix is the public path prefix for gallery photos,
-// served by the /uploads/ route with immutable caching (file names carry
-// a content hash, so every new file is a fresh URL).
-const galleryUploadPrefix = "/uploads/"
-
-// galleryFileName matches server-generated gallery upload names
-// (galeria-foto-<sha256 prefix>.<ext> / galeria-nahlad-<sha256 prefix>.<ext>).
-// Only matching files are ever deleted by the handler; /static/ seed files
-// are never touched.
-var galleryFileName = regexp.MustCompile(`^galeria-(foto|nahlad)-[0-9a-f]{16}\.(jpg|jpeg|png|webp)$`)
 
 // GalleryHandler serves admin management of the public gallery:
 // one ordered list mixing uploaded photos and YouTube videos.
 type GalleryHandler struct {
 	queries *db.Queries
-	// filesDir is the directory holding uploaded gallery photos
-	// (data/uploads by default). Tests override it so they never
-	// touch real assets.
-	filesDir string
+	// uploads stores uploaded gallery photos (data/uploads by default).
+	// Tests point it at a temp dir so they never touch real assets.
+	uploads *uploads.Store
 }
 
 // NewGalleryHandler creates an admin gallery handler.
 func NewGalleryHandler(queries *db.Queries, uploadDir string) *GalleryHandler {
-	return &GalleryHandler{queries: queries, filesDir: uploadDir}
+	return &GalleryHandler{queries: queries, uploads: uploads.NewStore(uploadDir)}
 }
 
 // ListPage renders the gallery management page in shared display order.
@@ -81,7 +68,7 @@ func (h *GalleryHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := readUploadFile(r, "photo", gallery.MaxPhotoBytes)
+	data, err := uploads.ReadFormFile(r, "photo", gallery.MaxPhotoBytes)
 	if err != nil {
 		h.createPhotoFailed(w, r, "Vyber fotku (JPG, PNG alebo WebP) a skús to znova.")
 
@@ -95,21 +82,18 @@ func (h *GalleryHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileName := "galeria-foto-" + contentHash(mainData) + ".jpg"
-	previewName := "galeria-nahlad-" + contentHash(previewData) + ".jpg"
-	if bytes.Equal(previewData, mainData) {
-		previewName = fileName
-	}
-
-	if err := h.storeFile(fileName, mainData); err != nil {
+	filePath, err := h.uploads.Save("galeria-foto", mainData, ".jpg")
+	if err != nil {
 		h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
 		return
 	}
 
-	if previewName != fileName {
-		if err := h.storeFile(previewName, previewData); err != nil {
-			_ = os.Remove(filepath.Join(h.filesDir, fileName))
+	previewPath := filePath
+	if !bytes.Equal(previewData, mainData) {
+		previewPath, err = h.uploads.Save("galeria-nahlad", previewData, ".jpg")
+		if err != nil {
+			h.uploads.Remove(filePath, "")
 			h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
 			return
@@ -119,8 +103,8 @@ func (h *GalleryHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) {
 	if err := ordering.InsertFirst(r.Context(), h.queries, ordering.GalleryItems, func(q *db.Queries) error {
 		_, err := q.CreateGalleryItem(r.Context(), db.CreateGalleryItemParams{
 			Kind:        gallery.KindPhoto,
-			FilePath:    galleryUploadPrefix + fileName,
-			PreviewPath: galleryUploadPrefix + previewName,
+			FilePath:    filePath,
+			PreviewPath: previewPath,
 			Alt:         alt,
 			Position:    1,
 		})
@@ -484,15 +468,6 @@ func (h *GalleryHandler) findItem(w http.ResponseWriter, r *http.Request) (db.Ga
 	return item, true
 }
 
-// storeFile writes uploaded bytes to the gallery uploads directory.
-func (h *GalleryHandler) storeFile(name string, data []byte) error {
-	if err := os.MkdirAll(h.filesDir, 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath.Join(h.filesDir, name), data, 0o644)
-}
-
 // removeUnreferencedUpload deletes photo files that no remaining gallery
 // item references. Upload names are content-addressed, so two identical
 // photos share one file; deleting only one of them must keep the file.
@@ -520,22 +495,6 @@ func (h *GalleryHandler) removeUnreferencedUpload(ctx context.Context, paths ...
 			continue
 		}
 
-		h.removeUploadFile(path, "")
+		h.uploads.Remove(path, "")
 	}
-}
-
-// removeUploadFile deletes a previous gallery upload, keeping the file at
-// keepPath. Only server-generated names inside the uploads directory
-// qualify; /static/ seed paths and unknown names are never touched.
-func (h *GalleryHandler) removeUploadFile(urlPath, keepPath string) {
-	if urlPath == "" || urlPath == keepPath {
-		return
-	}
-
-	name := strings.TrimPrefix(urlPath, galleryUploadPrefix)
-	if name == urlPath || strings.Contains(name, "/") || !galleryFileName.MatchString(name) {
-		return
-	}
-
-	_ = os.Remove(filepath.Join(h.filesDir, name))
 }

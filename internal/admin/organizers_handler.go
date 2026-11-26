@@ -2,15 +2,9 @@ package admin
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -18,32 +12,22 @@ import (
 	"github.com/tgustinak/pohkapela.sk/internal/db"
 	"github.com/tgustinak/pohkapela.sk/internal/htmx"
 	"github.com/tgustinak/pohkapela.sk/internal/organizers"
+	"github.com/tgustinak/pohkapela.sk/internal/uploads"
 	admintemplates "github.com/tgustinak/pohkapela.sk/web/templates/admin"
 )
-
-// organizerUploadPrefix is the public path prefix for organizer files,
-// served by the /uploads/ route with immutable caching (file names carry
-// a content hash, so every new file is a fresh URL).
-const organizerUploadPrefix = "/uploads/"
-
-// organizerFileName matches server-generated organizer file names
-// (organizatori-<kind>-<sha256 prefix>.<ext>). Only matching files are
-// ever deleted by the handler; /static/ seed files are never touched.
-var organizerFileName = regexp.MustCompile(`^organizatori-(rider|input-list|logo|foto|nahlad)-[0-9a-f]{16}\.(pdf|jpg|jpeg|png|webp)$`)
 
 // OrganizersHandler serves admin management of the "Pre organizátorov"
 // page: replacing the 3 fixed documents and CRUD of promo photos.
 type OrganizersHandler struct {
 	queries *db.Queries
-	// filesDir is the directory holding uploaded organizer files
-	// (data/uploads by default). Tests override it so they never
-	// touch real assets.
-	filesDir string
+	// uploads stores uploaded organizer files (data/uploads by default).
+	// Tests point it at a temp dir so they never touch real assets.
+	uploads *uploads.Store
 }
 
 // NewOrganizersHandler creates an admin organizers handler.
 func NewOrganizersHandler(queries *db.Queries, uploadDir string) *OrganizersHandler {
-	return &OrganizersHandler{queries: queries, filesDir: uploadDir}
+	return &OrganizersHandler{queries: queries, uploads: uploads.NewStore(uploadDir)}
 }
 
 // ListPage renders the organizers management page.
@@ -86,7 +70,7 @@ func (h *OrganizersHandler) ReplaceDocument(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	data, err := readUploadFile(r, "file", organizers.MaxDocumentBytes)
+	data, err := uploads.ReadFormFile(r, "file", organizers.MaxDocumentBytes)
 	if err != nil {
 		h.replaceFailed(w, r, slot, "Vyber PDF súbor a skús to znova.")
 
@@ -99,10 +83,8 @@ func (h *OrganizersHandler) ReplaceDocument(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	name := "organizatori-" + slot + "-" + contentHash(data) + ".pdf"
-	urlPath := organizerUploadPrefix + name
-
-	if err := h.storeFile(name, data); err != nil {
+	urlPath, err := h.uploads.Save("organizatori-"+slot, data, ".pdf")
+	if err != nil {
 		h.replaceFailed(w, r, slot, "Súbor sa nepodarilo uložiť.")
 
 		return
@@ -127,7 +109,7 @@ func (h *OrganizersHandler) ReplaceDocument(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Best effort: drop the previous upload so files do not accumulate.
-	h.removeUploadFile(old.FilePath, urlPath)
+	h.uploads.Remove(old.FilePath, urlPath)
 
 	if !htmx.IsHtmxRequest(r) {
 		htmx.Redirect(w, r, "/admin/organizers")
@@ -178,7 +160,7 @@ func (h *OrganizersHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data, err := readUploadFile(r, "photo", organizers.MaxPhotoBytes)
+	data, err := uploads.ReadFormFile(r, "photo", organizers.MaxPhotoBytes)
 	if err != nil {
 		h.createPhotoFailed(w, r, "Vyber fotku (JPG, PNG alebo WebP) a skús to znova.")
 
@@ -194,7 +176,7 @@ func (h *OrganizersHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) 
 
 	previewData, previewExt := data, ext
 	separatePreview := false
-	if raw, err := readUploadFile(r, "preview", organizers.MaxPhotoBytes); err == nil {
+	if raw, err := uploads.ReadFormFile(r, "preview", organizers.MaxPhotoBytes); err == nil {
 		pext, ok := organizers.DetectPhoto(raw)
 		if !ok {
 			h.createPhotoFailed(w, r, "Náhľad musí byť JPG, PNG alebo WebP (max 10 MB).")
@@ -206,26 +188,21 @@ func (h *OrganizersHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) 
 		separatePreview = true
 	}
 
-	fileName := "organizatori-foto-" + contentHash(data) + ext
-	previewName := fileName
-	if separatePreview && !bytes.Equal(previewData, data) {
-		previewName = "organizatori-nahlad-" + contentHash(previewData) + previewExt
-	}
-
-	if err := h.storeFile(fileName, data); err != nil {
+	filePath, err := h.uploads.Save("organizatori-foto", data, ext)
+	if err != nil {
 		h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
 		return
 	}
 
-	if previewName != fileName {
-		if err := h.storeFile(previewName, previewData); err != nil {
+	previewPath := filePath
+	if separatePreview && !bytes.Equal(previewData, data) {
+		previewPath, err = h.uploads.Save("organizatori-nahlad", previewData, previewExt)
+		if err != nil {
 			h.createPhotoFailed(w, r, "Fotku sa nepodarilo uložiť.")
 
 			return
 		}
-	} else {
-		previewName = fileName
 	}
 
 	lastPos, err := h.queries.LastOrganizerPhotoPosition(r.Context())
@@ -236,8 +213,8 @@ func (h *OrganizersHandler) CreatePhoto(w http.ResponseWriter, r *http.Request) 
 	}
 
 	created, err := h.queries.CreateOrganizerPhoto(r.Context(), db.CreateOrganizerPhotoParams{
-		FilePath:    organizerUploadPrefix + fileName,
-		PreviewPath: organizerUploadPrefix + previewName,
+		FilePath:    filePath,
+		PreviewPath: previewPath,
 		Alt:         alt,
 		MetaLabel:   organizers.MetaLabel(ext, int64(len(data))),
 		Position:    lastPos + 1,
@@ -379,8 +356,8 @@ func (h *OrganizersHandler) DeletePhoto(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Best effort: uploaded files are just a cache of the DB state.
-	h.removeUploadFile(photo.FilePath, "")
-	h.removeUploadFile(photo.PreviewPath, photo.FilePath)
+	h.uploads.Remove(photo.FilePath, "")
+	h.uploads.Remove(photo.PreviewPath, photo.FilePath)
 
 	if !htmx.IsHtmxRequest(r) {
 		htmx.Redirect(w, r, "/admin/organizers")
@@ -427,56 +404,4 @@ func (h *OrganizersHandler) findPhoto(w http.ResponseWriter, r *http.Request) (d
 	}
 
 	return photo, true
-}
-
-// storeFile writes uploaded bytes to the uploads directory.
-func (h *OrganizersHandler) storeFile(name string, data []byte) error {
-	if err := os.MkdirAll(h.filesDir, 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath.Join(h.filesDir, name), data, 0o644)
-}
-
-// removeUploadFile deletes a previous upload file, keeping the one at
-// keepPath. Only server-generated names inside the uploads directory
-// qualify; /static/ seed paths and unknown names are never touched.
-func (h *OrganizersHandler) removeUploadFile(urlPath, keepPath string) {
-	if urlPath == "" || urlPath == keepPath {
-		return
-	}
-
-	name := strings.TrimPrefix(urlPath, organizerUploadPrefix)
-	if name == urlPath || strings.Contains(name, "/") || !organizerFileName.MatchString(name) {
-		return
-	}
-
-	_ = os.Remove(filepath.Join(h.filesDir, name))
-}
-
-// contentHash returns the first 16 hex chars of the data sha256,
-// used to build content-addressed upload file names.
-func contentHash(data []byte) string {
-	sum := sha256.Sum256(data)
-
-	return hex.EncodeToString(sum[:])[:16]
-}
-
-// readUploadFile reads a single multipart file field, capped at limit+1
-// bytes so oversize uploads are detected. It returns an error when the
-// field is missing or empty.
-func readUploadFile(r *http.Request, field string, limit int64) ([]byte, error) {
-	file, _, err := r.FormFile(field)
-	if err != nil {
-		return nil, err
-	}
-
-	defer file.Close()
-
-	data, err := io.ReadAll(io.LimitReader(file, limit+1))
-	if err != nil || len(data) == 0 {
-		return nil, errors.New("empty upload")
-	}
-
-	return data, nil
 }

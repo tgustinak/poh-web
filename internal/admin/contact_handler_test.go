@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -228,8 +226,8 @@ func TestContactUploadPhoto(t *testing.T) {
 		t.Fatalf("expected content-hashed photo path, got %q", row.PhotoPath)
 	}
 
-	if _, err := os.Stat(filepath.Join(handler.photoDir, strings.TrimPrefix(row.PhotoPath, "/uploads/"))); err != nil {
-		t.Fatalf("expected photo file to exist: %v", err)
+	if !handler.uploads.Exists(row.PhotoPath) {
+		t.Fatalf("expected photo file %q to exist", row.PhotoPath)
 	}
 
 	// A re-upload of identical bytes maps to the same URL (cache stays valid).
@@ -250,12 +248,12 @@ func TestContactUploadPhotoReplacesOldFile(t *testing.T) {
 	handler, queries := newTestContactHandler(t)
 
 	// Pretend a previous upload exists.
-	oldName := "manager-0123456789abcdef.webp"
-	if err := os.WriteFile(filepath.Join(handler.photoDir, oldName), minimalPNG, 0o644); err != nil {
+	oldPath, err := handler.uploads.Save("manager", []byte("old photo bytes"), ".webp")
+	if err != nil {
 		t.Fatalf("seed photo file: %v", err)
 	}
 
-	if _, err := queries.UpdateContactPhoto(t.Context(), "/uploads/"+oldName); err != nil {
+	if _, err := queries.UpdateContactPhoto(t.Context(), oldPath); err != nil {
 		t.Fatalf("seed photo path: %v", err)
 	}
 
@@ -271,12 +269,12 @@ func TestContactUploadPhotoReplacesOldFile(t *testing.T) {
 		t.Fatalf("get contact: %v", err)
 	}
 
-	if row.PhotoPath == "/uploads/"+oldName {
+	if row.PhotoPath == oldPath {
 		t.Fatalf("expected new photo path, got unchanged %q", row.PhotoPath)
 	}
 
-	if _, err := os.Stat(filepath.Join(handler.photoDir, oldName)); !os.IsNotExist(err) {
-		t.Fatalf("expected old photo file removed, stat err = %v", err)
+	if handler.uploads.Exists(oldPath) {
+		t.Fatalf("expected old photo file %q removed", oldPath)
 	}
 }
 
@@ -299,12 +297,12 @@ func TestContactDeletePhoto(t *testing.T) {
 	handler, queries := newTestContactHandler(t)
 
 	// Pretend a photo exists first.
-	name := "manager-0123456789abcdef.webp"
-	if err := os.WriteFile(filepath.Join(handler.photoDir, name), minimalPNG, 0o644); err != nil {
+	photoPath, err := handler.uploads.Save("manager", []byte("photo bytes"), ".webp")
+	if err != nil {
 		t.Fatalf("seed photo file: %v", err)
 	}
 
-	if _, err := queries.UpdateContactPhoto(t.Context(), "/uploads/"+name); err != nil {
+	if _, err := queries.UpdateContactPhoto(t.Context(), photoPath); err != nil {
 		t.Fatalf("seed photo path: %v", err)
 	}
 
@@ -328,8 +326,8 @@ func TestContactDeletePhoto(t *testing.T) {
 		t.Fatalf("expected empty photo path, got %q", row.PhotoPath)
 	}
 
-	if _, err := os.Stat(filepath.Join(handler.photoDir, name)); !os.IsNotExist(err) {
-		t.Fatalf("expected photo file removed, stat err = %v", err)
+	if handler.uploads.Exists(photoPath) {
+		t.Fatalf("expected photo file %q removed", photoPath)
 	}
 }
 
