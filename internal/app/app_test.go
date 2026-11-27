@@ -577,6 +577,51 @@ func TestCookieConsentBanner(t *testing.T) {
 	}
 }
 
+func TestAnalyticsGatedBehindConsent(t *testing.T) {
+	t.Cleanup(func() { site.SetAnalyticsID("") })
+
+	server, _, _ := testServer(t)
+	client := testClient(t)
+
+	get := func(path string) (string, http.Header) {
+		resp, err := client.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("get %s: %v", path, err)
+		}
+
+		return readBody(t, resp), resp.Header
+	}
+
+	// Disabled by default: no measurement ID rendered.
+	body, _ := get("/")
+	if strings.Contains(body, `data-ga-id="G-`) {
+		t.Fatal("expected no GA id when analytics is disabled")
+	}
+
+	site.SetAnalyticsID("G-TEST123456")
+
+	body, header := get("/")
+
+	// The ID is only a data attribute; the tag is never in the HTML.
+	if !strings.Contains(body, `data-ga-id="G-TEST123456"`) {
+		t.Fatal("expected GA id data attribute on the banner")
+	}
+
+	if strings.Contains(body, `src="https://www.googletagmanager.com`) {
+		t.Fatal("expected gtag script not to be loaded before consent")
+	}
+
+	if !strings.Contains(header.Get("Content-Security-Policy"), "https://www.googletagmanager.com") {
+		t.Fatal("expected CSP to allow Google Tag Manager")
+	}
+
+	// Admin pages have no consent banner, so never load analytics.
+	body, _ = get("/admin/login")
+	if strings.Contains(body, "data-ga-id") || strings.Contains(body, "googletagmanager") {
+		t.Fatal("expected no analytics on admin pages")
+	}
+}
+
 func TestMediaEmbedsGatedBehindConsent(t *testing.T) {
 	server, _, _ := testServer(t)
 	client := testClient(t)

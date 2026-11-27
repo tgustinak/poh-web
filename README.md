@@ -44,6 +44,8 @@ target host and paths are read from a local, git-ignored `.deploy.env` file
 (see the variables listed at the top of the script). Production configuration
 is supplied through environment variables (see `.env.example`).
 `SITE_URL` is required; the app refuses to start without it.
+`GA_MEASUREMENT_ID` (Google Analytics 4, `G-XXXXXXXXXX`) is optional; when set,
+the tag is loaded on public pages only after the visitor accepts cookies.
 
 The remote side runs `/usr/local/bin/pohkapela-deploy`; install or update it
 from `scripts/remote-deploy.sh` (the header of that file shows the exact

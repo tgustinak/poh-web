@@ -1,20 +1,25 @@
 package templates
 
-import "github.com/tgustinak/poh-web/internal/scripts"
+import (
+	"github.com/tgustinak/poh-web/internal/scripts"
+	"github.com/tgustinak/poh-web/internal/site"
+)
 
 // ConsentBanner renders the GDPR cookie consent banner for public pages.
 // The choice is stored in localStorage (no request to the server):
 //
-//	poh-cookie-consent = {"media":true|false,"ts":123}
+//	poh-cookie-consent = {"media":true|false,"analytics":true|false,"ts":123}
 //
-// "media" gates third-party embeds (Spotify player). YouTube already runs
+// "analytics" gates Google Analytics (loaded only when GA_MEASUREMENT_ID is
+// set, and only after acceptance). "media" gates third-party embeds
+// (Spotify player). YouTube already runs
 // in privacy-enhanced (nocookie) mode. Admin login cookies are strictly
 // necessary and always on. A "poh:consent" event is dispatched on change.
 templ ConsentBanner() {
-	<div id="cookie-consent" class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-w-md z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur p-5 sm:p-6 shadow-2xl">
+	<div id="cookie-consent" data-ga-id={ site.AnalyticsID() } class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-w-md z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur p-5 sm:p-6 shadow-2xl">
 		<p class="text-sm font-bold text-white">Súbory cookies</p>
 		<p class="mt-2 text-sm leading-relaxed text-white/60">
-			Používame nevyhnutné cookies (napr. prihlásenie do administrácie). Prehrávač Spotify a videá z YouTube (v režime zvýšenej ochrany súkromia) sa načítajú až po tvojom súhlase.
+			Používame nevyhnutné cookies, analytické cookies (Google Analytics), prehrávač Spotify a videá z YouTube (v režime zvýšenej ochrany súkromia) sa načítajú až po tvojom súhlase.
 		</p>
 		<div class="mt-4 flex flex-col sm:flex-row gap-2">
 			<button type="button" onclick="pohConsentAccept()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-brand-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-black transition hover:bg-brand-300 cursor-pointer"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>Prijať všetky</button>
@@ -26,8 +31,8 @@ templ ConsentBanner() {
 
 templ ConsentScripts() {
 	<script>
-		(function() {
-			var KEY = 'poh-cookie-consent';
+		(function () {
+			var KEY = "poh-cookie-consent";
 			function read() {
 				try {
 					return JSON.parse(localStorage.getItem(KEY));
@@ -41,7 +46,7 @@ templ ConsentScripts() {
 				} catch (e) {}
 			}
 			function banner() {
-				return document.getElementById('cookie-consent');
+				return document.getElementById("cookie-consent");
 			}
 			function showBanner() {
 				var b = banner();
@@ -49,81 +54,141 @@ templ ConsentScripts() {
 					return;
 				}
 				clearTimeout(window.__cookieHideTimer);
-				b.classList.remove('hidden', 'cookie-banner-leave');
+				b.classList.remove("hidden", "cookie-banner-leave");
 				void b.offsetWidth;
-				b.classList.add('cookie-banner-enter');
+				b.classList.add("cookie-banner-enter");
 			}
 			function hideBanner() {
 				var b = banner();
 				if (!b) {
 					return;
 				}
-				b.classList.remove('cookie-banner-enter');
-				b.classList.add('cookie-banner-leave');
+				b.classList.remove("cookie-banner-enter");
+				b.classList.add("cookie-banner-leave");
 				clearTimeout(window.__cookieHideTimer);
-				window.__cookieHideTimer = setTimeout(function() {
-					b.classList.add('hidden');
-					b.classList.remove('cookie-banner-leave');
+				window.__cookieHideTimer = setTimeout(function () {
+					b.classList.add("hidden");
+					b.classList.remove("cookie-banner-leave");
 				}, 260);
 			}
 			function loadOne(el) {
 				if (!el || el.dataset.loaded || !el.dataset.mediaSrc) {
 					return;
 				}
-				var f = document.createElement('iframe');
-				f.className = 'w-full block';
-				f.style.borderRadius = '0';
-				f.style.backgroundColor = '#121212';
-				f.width = '100%';
-				f.height = el.dataset.mediaHeight || '352';
-				f.setAttribute('allowfullscreen', '');
-				f.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
-				f.setAttribute('loading', 'lazy');
-				f.title = el.dataset.mediaTitle || 'Vložený prehrávač';
+				var f = document.createElement("iframe");
+				f.className = "w-full block";
+				f.style.borderRadius = "0";
+				f.style.backgroundColor = "#121212";
+				f.width = "100%";
+				f.height = el.dataset.mediaHeight || "352";
+				f.setAttribute("allowfullscreen", "");
+				f.setAttribute(
+					"allow",
+					"autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture",
+				);
+				f.setAttribute("loading", "lazy");
+				f.title = el.dataset.mediaTitle || "Vložený prehrávač";
 				f.src = el.dataset.mediaSrc;
-				var ph = el.querySelector('[data-media-placeholder]');
+				var ph = el.querySelector("[data-media-placeholder]");
 				if (ph) {
 					ph.remove();
 				}
 				el.appendChild(f);
-				el.dataset.loaded = '1';
+				el.dataset.loaded = "1";
 			}
 			function loadAll() {
-				document.querySelectorAll('[data-media-embed]').forEach(loadOne);
+				document.querySelectorAll("[data-media-embed]").forEach(loadOne);
+			}
+			function gaId() {
+				var b = banner();
+				return b ? b.dataset.gaId || "" : "";
+			}
+			function loadAnalytics() {
+				var id = gaId();
+				if (!id || window.__gaLoaded) {
+					return;
+				}
+				window.__gaLoaded = true;
+				window["ga-disable-" + id] = false;
+				window.dataLayer = window.dataLayer || [];
+				window.gtag = function () {
+					window.dataLayer.push(arguments);
+				};
+				window.gtag("js", new Date());
+				window.gtag("config", id);
+				var s = document.createElement("script");
+				s.async = true;
+				s.src =
+					"https://www.googletagmanager.com/gtag/js?id=" +
+					encodeURIComponent(id);
+				document.head.appendChild(s);
+			}
+			function disableAnalytics() {
+				var id = gaId();
+				if (id) {
+					window["ga-disable-" + id] = true;
+				}
+				// Remove GA cookies (_ga, _ga_XXXX) set earlier.
+				var host = location.hostname.split(".");
+				var domains = [location.hostname];
+				for (var i = 1; i < host.length - 1; i++) {
+					domains.push("." + host.slice(i).join("."));
+				}
+				document.cookie.split(";").forEach(function (c) {
+					var name = c.split("=")[0].trim();
+					if (name === "_ga" || name.indexOf("_ga_") === 0 || name === "_gid") {
+						domains.forEach(function (d) {
+							document.cookie =
+								name +
+								"=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=" +
+								d;
+						});
+						document.cookie =
+							name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+					}
+				});
 			}
 			function apply(consent) {
 				if (consent && consent.media) {
 					loadAll();
 				}
-				document.dispatchEvent(new CustomEvent('poh:consent', { detail: consent }));
+				if (consent && consent.analytics) {
+					loadAnalytics();
+				} else {
+					disableAnalytics();
+				}
+				document.dispatchEvent(
+					new CustomEvent("poh:consent", { detail: consent }),
+				);
 			}
-			window.pohLoadMediaOne = function(btn) {
-				var el = btn ? btn.closest('[data-media-embed]') : null;
+			window.pohLoadMediaOne = function (btn) {
+				var el = btn ? btn.closest("[data-media-embed]") : null;
 				loadOne(el);
 			};
-			window.pohConsentAccept = function() {
-				var c = { media: true, ts: Date.now() };
+			window.pohConsentAccept = function () {
+				var c = { media: true, analytics: true, ts: Date.now() };
 				store(c);
 				hideBanner();
 				apply(c);
 			};
-			window.pohConsentReject = function() {
-				var c = { media: false, ts: Date.now() };
+			window.pohConsentReject = function () {
+				var c = { media: false, analytics: false, ts: Date.now() };
 				store(c);
 				hideBanner();
 				apply(c);
 			};
-			window.pohConsentReset = function() {
+			window.pohConsentReset = function () {
 				try {
 					localStorage.removeItem(KEY);
 				} catch (e) {}
 				showBanner();
 			};
-			window.pohGetConsent = function() {
+			window.pohGetConsent = function () {
 				return read();
 			};
 			var current = read();
-			if (!current) {
+			// Ask again when analytics was introduced after the stored choice.
+			if (!current || (gaId() && typeof current.analytics === "undefined")) {
 				showBanner();
 			} else {
 				apply(current);

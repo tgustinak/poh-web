@@ -23,6 +23,7 @@ func TestValidate(t *testing.T) {
 		"site url no host":   func(c *Config) { c.SiteURL = "https://" },
 		"site url no scheme": func(c *Config) { c.SiteURL = "www.example.com" },
 		"site url with path": func(c *Config) { c.SiteURL = "https://www.example.com/blog" },
+		"bad ga id":          func(c *Config) { c.GAMeasurementID = "UA-123" },
 	} {
 		cfg := valid
 		mutate(&cfg)
