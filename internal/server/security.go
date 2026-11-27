@@ -17,12 +17,12 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		// Only sent over HTTPS by browsers; harmless on plain HTTP.
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; "+
-			"script-src 'self' 'unsafe-inline'; "+
+			"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; "+
 			"style-src 'self' 'unsafe-inline'; "+
 			"img-src 'self' data: blob: https:; "+
 			"media-src 'self' https:; "+
 			"font-src 'self' data:; "+
-			"connect-src 'self'; "+
+			"connect-src 'self' https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com; "+
 			"frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com; "+
 			"object-src 'none'; base-uri 'self'; form-action 'self'")
 

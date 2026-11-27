@@ -20,3 +20,17 @@ func SetBaseURL(u string) {
 func URL(path string) string {
 	return baseURL + path
 }
+
+var analyticsID string
+
+// SetAnalyticsID sets the Google Analytics measurement ID ("" disables
+// analytics). Call once at startup, before serving requests.
+func SetAnalyticsID(id string) {
+	analyticsID = id
+}
+
+// AnalyticsID returns the Google Analytics measurement ID, or "" when
+// analytics is disabled.
+func AnalyticsID() string {
+	return analyticsID
+}

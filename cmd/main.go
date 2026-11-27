@@ -54,6 +54,7 @@ func main() {
 
 	auth.ConfigureCookies(cfg.BehindProxy, cfg.CookieSecure)
 	site.SetBaseURL(cfg.SiteURL)
+	site.SetAnalyticsID(cfg.GAMeasurementID)
 
 	shutdownTimeout, err := strconv.Atoi(cfg.ForceShutdownAfterInSeconds)
 	if err != nil || shutdownTimeout <= 0 {

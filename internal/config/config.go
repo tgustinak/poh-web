@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -32,6 +33,10 @@ type Config struct {
 	// CookieSecure forces Secure on session/CSRF cookies. Use "always"
 	// in production behind HTTPS, "auto" (default) follows the request.
 	CookieSecure string
+	// GAMeasurementID is the Google Analytics 4 measurement ID (G-XXXXXXXX).
+	// Optional: when empty, analytics is disabled entirely. The tag is only
+	// loaded in the visitor's browser after they accept analytics cookies.
+	GAMeasurementID string
 }
 
 // Load reads .env (if present) and returns Config with defaults.
@@ -49,6 +54,7 @@ func Load() Config {
 		BehindProxy:                 getenv("BEHIND_PROXY", "false") == "true",
 		CookieSecure:                getenv("COOKIE_SECURE", "auto"),
 		SiteURL:                     os.Getenv("SITE_URL"),
+		GAMeasurementID:             os.Getenv("GA_MEASUREMENT_ID"),
 	}
 }
 
@@ -92,8 +98,14 @@ func (c Config) Validate() error {
 		return fmt.Errorf("invalid or missing SITE_URL %q: expected like https://www.example.com", c.SiteURL)
 	}
 
+	if c.GAMeasurementID != "" && !gaIDPattern.MatchString(c.GAMeasurementID) {
+		return fmt.Errorf("invalid GA_MEASUREMENT_ID %q: expected like G-XXXXXXXXXX", c.GAMeasurementID)
+	}
+
 	return nil
 }
+
+var gaIDPattern = regexp.MustCompile(`^G-[A-Z0-9]{4,20}$`)
 
 // NeedsAdminSeed reports whether initial admin credentials are configured.
 // When false, no admin user is seeded and /admin login cannot succeed
