@@ -15,8 +15,11 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_TIME=unknown
 COPY --from=css /src/web/static/css/output.css web/static/css/output.css
-RUN go tool templ generate && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/main.go
+RUN go tool templ generate && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/tgustinak/poh-web/internal/buildinfo.Version=${VERSION} -X github.com/tgustinak/poh-web/internal/buildinfo.Commit=${COMMIT} -X github.com/tgustinak/poh-web/internal/buildinfo.BuildTime=${BUILD_TIME}" -o /out/app ./cmd/main.go
 RUN mkdir -p /out/data /out/data/uploads
 
 

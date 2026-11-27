@@ -35,7 +35,7 @@ npm run css:build
 
 info "Building Go binary for Linux..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-  -trimpath -ldflags="-s -w" \
+  -trimpath -ldflags="-s -w -X github.com/tgustinak/poh-web/internal/buildinfo.Version=$(git describe --tags --always --dirty) -X github.com/tgustinak/poh-web/internal/buildinfo.Commit=$(git rev-parse HEAD) -X github.com/tgustinak/poh-web/internal/buildinfo.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o bin/app ./cmd/main.go
 
 [[ -f bin/app ]] || err "Go build failed — bin/app not found"

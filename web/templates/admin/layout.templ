@@ -1,6 +1,9 @@
 package templates
 
 import (
+	"fmt"
+
+	"github.com/tgustinak/poh-web/internal/buildinfo"
 	"github.com/tgustinak/poh-web/internal/scripts"
 	"github.com/tgustinak/poh-web/web/templates"
 )
@@ -32,6 +35,11 @@ templ AdminLayout(title string, active string, csrf string) {
 						<input type="hidden" name="csrf_token" value={ csrf }/>
 						<button type="submit" class="admin-nav-item w-full text-left cursor-pointer">Odhlásiť</button>
 					</form>
+					<div class="mt-2 px-3 text-[11px] leading-relaxed text-white/30">
+						<div>{ buildinfo.Version } · { buildinfo.ShortCommit() }</div>
+						<div>Build: { buildinfo.BuildTime }</div>
+						<div>{ fmt.Sprintf("DB: %d", buildinfo.DBVersion()) }</div>
+					</div>
 				</div>
 			</aside>
 			<div class="flex-1 min-w-0">
@@ -75,19 +83,19 @@ templ AdminLayout(title string, active string, csrf string) {
 
 templ AdminDemoScripts() {
 	<script>
-			document.querySelectorAll('form[data-demo]').forEach(f => {
-				f.addEventListener('submit', (e) => {
-					e.preventDefault();
-					adminToast('Demo režim — napoj na backend');
-				});
+		document.querySelectorAll("form[data-demo]").forEach((f) => {
+			f.addEventListener("submit", (e) => {
+				e.preventDefault();
+				adminToast("Demo režim — napoj na backend");
 			});
-			document.querySelectorAll('[data-demo-delete]').forEach(b => {
-				b.addEventListener('click', () => {
-					if (confirm('Naozaj zmazať?')) {
-						adminToast('Demo režim — napoj na backend');
-					}
-				});
+		});
+		document.querySelectorAll("[data-demo-delete]").forEach((b) => {
+			b.addEventListener("click", () => {
+				if (confirm("Naozaj zmazať?")) {
+					adminToast("Demo režim — napoj na backend");
+				}
 			});
+		});
 	</script>
 }
 
