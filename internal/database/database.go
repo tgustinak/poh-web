@@ -12,6 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	dbmigrations "github.com/tgustinak/poh-web/db/migrations"
+	"github.com/tgustinak/poh-web/internal/buildinfo"
 	"github.com/tgustinak/poh-web/internal/db"
 )
 
@@ -65,6 +66,13 @@ func Migrate(ctx context.Context, conn *sql.DB) error {
 	if err := goose.UpContext(ctx, conn, "."); err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
 	}
+
+	version, err := goose.GetDBVersionContext(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("read database version: %w", err)
+	}
+
+	buildinfo.SetDBVersion(version)
 
 	return nil
 }

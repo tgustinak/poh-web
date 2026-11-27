@@ -2,10 +2,15 @@
 
 DATABASE_PATH ?= ./data/app.db
 
+BUILDINFO := github.com/tgustinak/poh-web/internal/buildinfo
+LDFLAGS := -X $(BUILDINFO).Version=$(shell git describe --tags --always --dirty) \
+	-X $(BUILDINFO).Commit=$(shell git rev-parse HEAD) \
+	-X $(BUILDINFO).BuildTime=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
 build:
 	go tool templ generate
 	npm run css:build
-	go build -o bin/app ./cmd/main.go
+	go build -ldflags="$(LDFLAGS)" -o bin/app ./cmd/main.go
 
 dev:
 	@go tool templ generate
